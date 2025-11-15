@@ -7,7 +7,7 @@ import { fetchCartItemCount } from "@/api/cart/cart_api";
 import { useCart } from "@/context/CartContext";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/userAuthStore";
-import { startGoogleLogin } from "@/api/login/login_api";
+import { loginAsGuest, startGoogleLogin } from "@/api/login/login_api";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -47,6 +47,22 @@ export default function LoginPage() {
       router.push("/");
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "登入失敗，請稍後再試");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGuestLogin = async () => {
+    setMessage("");
+    setLoading(true);
+    try {
+      const data = await loginAsGuest();
+      const count = await fetchCartItemCount();
+      dispatch({ type: "SET_COUNT", payload: count });
+      loginStore({ id: data.userId, email: data.email ?? "guest" });
+      router.push("/");
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : "訪客登入失敗");
     } finally {
       setLoading(false);
     }
@@ -109,6 +125,15 @@ export default function LoginPage() {
             onClick={startGoogleLogin}
           >
             使用 Google 信箱登入
+          </button>
+
+          <button
+            type="button"
+            className={`${styles.submitBtn} mb-4`}
+            onClick={handleGuestLogin}
+            disabled={loading}
+          >
+            以訪客身份瀏覽
           </button>
 
           <button

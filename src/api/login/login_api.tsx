@@ -76,6 +76,15 @@ export async function logout(): Promise<void> {
   }
 }
 
+export async function loginAsGuest() {
+  const { data } = await axios.post(
+    `${API_BASE_URL}/api/auth/login-guest`,
+    {},
+    { withCredentials: true }
+  );
+  return data; // { userId, email }
+}
+
 export function startGoogleLogin() {
   window.location.href = `${API_BASE_URL}/api/auth/google`;
 }

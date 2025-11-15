@@ -67,6 +67,10 @@ export default function RegisterPage() {
         <Image src="/title-login.png" alt="register" width={77} height={20} />
         <p className="text-muted mb-4">會員註冊</p>
 
+        <p className="text-muted mb-4">
+          因Render禁止使用SMTP，請使用者直接用email或訪客登入
+        </p>
+
         <form className="w-100" onSubmit={handleSubmit}>
           <div className="mb-3">
             <label className="form-label text-white">Email</label>
