@@ -1,0 +1,182 @@
+$brand-gold: #bb986c;
+$dropdown-bg: #ffffff;
+$icon-border: rgba(255, 255, 255, 0.3);
+
+.nav-link {
+  font-size: 14px !important;
+  font-weight: 700;
+}
+
+.nav-item {
+  &.dropdown {
+    &:hover a {
+      font-size: 16px;
+    }
+  }
+}
+
+.nav-item.dropdown:hover a {
+  font-size: 14px;
+}
+
+.dropdown-menu {
+  background-color: $dropdown-bg;
+  border: none;
+  border-radius: 0 !important;
+  transition: all 0.3s ease-in-out;
+  min-width: 12.5rem;
+
+  li a {
+    font-weight: 700;
+    padding: 6px 20px;
+    color: #4b566b;
+  }
+}
+
+.dropdown-item {
+  color: black;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.2;
+
+  p.text-gray-500 {
+    margin: 0;
+    line-height: 1.1;
+  }
+
+  &:hover,
+  &:hover p,
+  &:hover a {
+    color: $brand-gold !important;
+    transition: color 0.3s ease;
+    background-color: transparent !important;
+  }
+}
+
+.navbar {
+  .nav-link:hover {
+    color: $brand-gold !important;
+    transition: color 0.3s ease;
+    font-size: 16px;
+  }
+}
+
+.dropdown-toggle::after {
+  display: none !important;
+  content: none !important;
+}
+
+// ?�部 SVG icon
+.topsvg {
+  margin-left: 12px;
+
+  &:hover {
+    fill: $brand-gold !important;
+    transition: fill 0.3s ease;
+    cursor: pointer;
+  }
+}
+
+.nav-icon-group {
+  display: flex;
+  align-items: center;
+}
+
+.nav-icon {
+  padding: 15px 30px;
+  cursor: pointer;
+
+  & + .nav-icon {
+    border-left: 1px solid $icon-border;
+  }
+
+  &:last-child {
+    padding: 15px 0px 15px 30px;
+  }
+}
+
+.nav-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 3rem;
+  padding-left: 30px !important;
+  padding-right: 30px !important;
+}
+
+.nav-left {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  flex: 1;
+
+  .navbar-collapse {
+    flex: 1;
+  }
+}
+
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 2.5rem;
+  margin-left: 2rem;
+  flex-wrap: wrap;
+}
+
+//購物車數??
+.cart-link {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.cart-count {
+  position: absolute;
+  top: -4px;
+  right: -8px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: #ff4d4f;
+  color: #fff;
+  font-size: 11px;
+  line-height: 18px;
+  text-align: center;
+}
+
+.user-dropdown {
+  position: relative;
+  .dropdown-toggle {
+    border: none;
+    background: transparent;
+    padding: 0;
+  }
+
+  .user-menu {
+    display: none;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+  }
+
+  .dropdown-menu {
+    right: 0;
+    left: auto;
+    background-color: #fff;
+
+    .dropdown-item {
+      color: #4b566b;
+      font-weight: 700;
+      a {
+        padding: 0;
+        font-size: 14px;
+      }
+    }
+  }
+
+  &:hover .user-menu,
+  &:focus-within .user-menu {
+    display: block;
+    opacity: 1;
+  }
+}

@@ -1,0 +1,91 @@
+@font-face {
+  font-family: "Worker";
+  src: url("/fonts/Worker-Bold.woff2") format("woff2");
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+.standing {
+  color: #fff;
+  min-width: 1280px;
+
+  .p1 {
+    font-size: 14px;
+    text-align: center;
+    padding: 0.75rem 0;
+    margin-bottom: 0;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    background: transparent;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #252525;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    font-size: 14px;
+  }
+
+  thead {
+    background: #1b1b1b;
+    text-transform: uppercase;
+
+    th {
+      padding: 0.9rem 0.8rem;
+      font-weight: 600;
+      font-size: 12px; // 先設預設 12px
+
+      &:nth-child(-n + 2) {
+        font-size: 14px; // 前兩欄
+      }
+
+      &:nth-child(2) {
+        text-align: center; // 第二欄置中
+      }
+    }
+  }
+
+  tbody tr {
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+
+    &:nth-child(odd) {
+      background: #2f2f2f;
+    }
+
+    td {
+      padding: 0.6rem 0.4rem;
+      text-align: center;
+
+      &:first-child {
+        font-weight: 700;
+      }
+
+      &:nth-child(2) {
+        text-align: left;
+      }
+    }
+  }
+}
+
+.teamCell {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: #bb986c;
+
+  span {
+    font-weight: 600;
+  }
+}
+
+.standing-title {
+  font-family: "Worker", "Noto Sans TC", sans-serif;
+  font-weight: 800;
+  /* 其他樣式同前 */
+}
+
+.title-zh {
+  font-family: "niveau-grotesk", "Rubik", sans-serif;
+}

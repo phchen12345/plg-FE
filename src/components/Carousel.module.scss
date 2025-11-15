@@ -1,0 +1,43 @@
+.carousel {
+  position: relative;
+  overflow: hidden;
+  padding-bottom: 3.5rem; // 預留空間給分頁點
+
+  :global(.swiper-pagination-bullet) {
+    background: #fff;
+    opacity: 1;
+    width: 0.3125rem;
+    height: 0.3125rem;
+    border: 0;
+    border-radius: 0.15625rem;
+    margin: 0 0.375rem !important;
+  }
+
+  :global(.swiper-pagination-bullet-active) {
+    background: #bb986c;
+    width: 1.25rem;
+    height: 0.3125rem;
+    border: 0;
+    border-radius: 0.15625rem;
+  }
+
+  :global(.swiper-pagination) {
+    bottom: 0rem; // 分頁點離底部距離
+  }
+  .caption {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: calc(1.5rem + 1rem); // 分頁點高度 + 1rem
+    margin: 0;
+    color: #fff;
+    z-index: 2;
+    font-size: 22px;
+    font-weight: 900;
+  }
+}
+
+.slide {
+  min-width: 100%;
+  text-align: center;
+}
