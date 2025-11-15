@@ -1,11 +1,11 @@
 "use client";
-import { Suspense, FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import styles from "./login.module.scss";
 import Image from "next/image";
 import { fetchCartItemCount } from "@/api/cart/cart_api";
 import { useCart } from "@/context/CartContext";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/userAuthStore";
 import { startGoogleLogin } from "@/api/login/login_api";
 
@@ -14,13 +14,6 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
-  const params = useSearchParams();
-
-  useEffect(() => {
-    const error = params.get("error");
-    if (error === "google") setMessage("Google 登入失敗，請再試一次");
-    if (error === "no-email") setMessage("無法取得 Google 信箱");
-  }, [params]);
 
   const router = useRouter();
   const loginStore = useAuthStore((state) => state.login);
