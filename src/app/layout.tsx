@@ -27,8 +27,11 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "PLG Basketball Portal",
+  title: "PLG test",
   description: "Made with Next.js",
+  icons: {
+    icon: "/pleague_logo2.jpg",
+  },
 };
 
 export default function RootLayout({
