@@ -2,7 +2,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import styles from "../payment/payment.module.scss";
 import { fetchOrders, OrderSummary } from "@/api/order/order_api";
 
@@ -23,9 +23,7 @@ const FULFILLMENT_LABEL: Record<string, string> = {
 
 const formatCurrency = (amount: string, currency = "TWD") => {
   const value = Number(amount);
-  if (Number.isNaN(value)) {
-    return `${currency} ${amount}`;
-  }
+  if (Number.isNaN(value)) return `${currency} ${amount}`;
   return new Intl.NumberFormat("zh-TW", {
     style: "currency",
     currency,
@@ -37,20 +35,32 @@ export default function OrdersPage() {
   const [orders, setOrders] = useState<OrderSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const data = await fetchOrders(20);
-        setOrders(data);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "無法取得訂單資訊");
-      } finally {
+  const loadOrders = useCallback(async (isRefresh = false) => {
+    try {
+      if (isRefresh) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
+      const data = await fetchOrders(20);
+      setOrders(data);
+      setError("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "無法取得訂單資訊");
+    } finally {
+      if (isRefresh) {
+        setRefreshing(false);
+      } else {
         setLoading(false);
       }
-    };
-    load();
+    }
   }, []);
+
+  useEffect(() => {
+    loadOrders(false);
+  }, [loadOrders]);
 
   const hasOrders = useMemo(() => orders.length > 0, [orders]);
 
@@ -67,7 +77,7 @@ export default function OrdersPage() {
       <main className={styles.paymentPage}>
         <div className={styles.emptyState}>
           <p>{error}</p>
-          <button onClick={() => window.location.reload()}>重新整理</button>
+          <button onClick={() => loadOrders(false)}>重新整理</button>
         </div>
       </main>
     );
@@ -90,7 +100,17 @@ export default function OrdersPage() {
     <main className={styles.paymentPage}>
       <section className={styles.layout}>
         <div className={styles.shippingCard}>
-          <h1>我的訂單</h1>
+          <div style={{ display: "flex", justifyContent: "space-between" }}>
+            <h1>我的訂單</h1>
+            <button
+              type="button"
+              onClick={() => loadOrders(true)}
+              disabled={refreshing}
+              style={{ minWidth: 120 }}
+            >
+              {refreshing ? "更新中..." : "重新整理"}
+            </button>
+          </div>
           {orders.map((order) => (
             <article key={order.id} className={styles.orderCard}>
               <header className={styles.orderCardHeader}>
