@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import styles from "./cart.module.scss";
 import {
   CartItem,
@@ -10,27 +11,18 @@ import {
   fetchCart,
   removeFromCart,
 } from "../../api/cart/cart_api";
-
 import { useCart } from "@/context/CartContext";
-
-const SHIPPING_OPTIONS = [
-  { value: "", label: "請先選擇送貨方式", fee: 0 },
-  { value: "home", label: "宅配到府 (+NTD 120)", fee: 120 },
-  { value: "store", label: "超商取貨 (+NTD 80)", fee: 80 },
-  { value: "pickup", label: "現場自取 (免費)", fee: 0 },
-];
 
 const currency = (cents = 0) =>
   `NTD ${cents.toLocaleString("zh-TW", { minimumFractionDigits: 0 })}`;
 
 export default function CartPage() {
   const [items, setItems] = useState<CartItem[]>([]);
-  const [shipping, setShipping] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [updatingId, setUpdatingId] = useState<number | null>(null);
-
   const { dispatch } = useCart();
+  const router = useRouter();
 
   useEffect(() => {
     const load = async () => {
@@ -38,8 +30,7 @@ export default function CartPage() {
         const { cart } = await fetchCart();
         setItems(cart);
       } catch (err) {
-        const message =
-          err instanceof Error ? err.message : "無法取得購物車資料";
+        const message = err instanceof Error ? err.message : "無法載入購物車";
         setError(message);
       } finally {
         setLoading(false);
@@ -48,28 +39,22 @@ export default function CartPage() {
     load();
   }, []);
 
-  const shippingFee = useMemo(() => {
-    const option = SHIPPING_OPTIONS.find((opt) => opt.value === shipping);
-    return option?.fee ?? 0;
-  }, [shipping]);
-
-  const subtotal = useMemo(() => {
-    return items.reduce((sum, item) => {
-      const price = item.priceCents ?? 0;
-      return sum + price * item.quantity;
-    }, 0);
-  }, [items]);
-
-  const totalQuantity = useMemo(() => {
-    return items.reduce((sum, item) => sum + item.quantity, 0);
-  }, [items]);
-
-  const total = subtotal + shippingFee;
+  const subtotal = useMemo(
+    () =>
+      items.reduce((sum, item) => {
+        const price = item.priceCents ?? 0;
+        return sum + price * item.quantity;
+      }, 0),
+    [items]
+  );
+  const totalQuantity = useMemo(
+    () => items.reduce((sum, item) => sum + item.quantity, 0),
+    [items]
+  );
 
   const adjustQuantity = async (productId: number, delta: number) => {
     const target = items.find((item) => item.productId === productId);
     if (!target) return;
-
     const nextQuantity = Math.max(1, target.quantity + delta);
     if (nextQuantity === target.quantity) return;
 
@@ -100,7 +85,7 @@ export default function CartPage() {
       setItems((prev) => prev.filter((item) => item.productId !== productId));
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : "移除商品失敗，請稍後再試";
+        err instanceof Error ? err.message : "刪除商品失敗，請稍後再試";
       setError(message);
     } finally {
       setUpdatingId(null);
@@ -114,12 +99,12 @@ export default function CartPage() {
     if (error) {
       return <p className={styles.errorText}>{error}</p>;
     }
-    if (items.length === 0) {
+    if (!items.length) {
       return (
         <div className={styles.emptyState}>
           <p>購物車目前沒有商品</p>
           <Link href="/shop" className={styles.linkButton}>
-            前往選購
+            繼續逛逛
           </Link>
         </div>
       );
@@ -142,9 +127,9 @@ export default function CartPage() {
                 />
               </div>
               <div className={styles.itemInfo}>
-                <span className={styles.badge}>預購</span>
-                <h3>{item.name ?? "PLG 官方商品"}</h3>
-                <p className={styles.meta}>{item.tag ?? "#黑色"} ｜ 單一尺寸</p>
+                <span className={styles.badge}>已選</span>
+                <h3>{item.name ?? "PLG 精品"}</h3>
+                <p className={styles.meta}>{item.tag ?? "#球迷必備"}</p>
                 <p className={styles.price}>{currency(price)}</p>
               </div>
               <div className={styles.quantityControl}>
@@ -200,31 +185,24 @@ export default function CartPage() {
           <aside className={styles.summaryCard}>
             <h3>TOTAL</h3>
             <div className={styles.summaryRow}>
-              <span>商品（{totalQuantity} 件）</span>
+              <span>商品共 {totalQuantity} 件</span>
               <strong>{currency(subtotal)}</strong>
             </div>
-            <div className={styles.summaryRow}>
-              <span>運費</span>
-              <strong>{currency(shippingFee)}</strong>
-            </div>
-            <select
-              className="form-select mt-3"
-              value={shipping}
-              onChange={(e) => setShipping(e.target.value)}
-            >
-              {SHIPPING_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
+            <p className={styles.shippingHint}>
+              宅配方式與運費會在付款頁面選擇
+            </p>
 
             <div className={styles.totalRow}>
-              <span>應付總額</span>
-              <strong>{currency(total)}</strong>
+              <span>應付金額</span>
+              <strong>{currency(subtotal)}</strong>
             </div>
 
-            <button type="button" className={styles.checkoutBtn}>
+            <button
+              type="button"
+              className={styles.checkoutBtn}
+              disabled={!items.length}
+              onClick={() => router.push("/payment")}
+            >
               去付款
             </button>
 

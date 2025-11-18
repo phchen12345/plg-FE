@@ -8,12 +8,11 @@
   color: #fff;
   text-align: center;
   padding: 72px 20px 48px;
-
-  h1 {
-    letter-spacing: 0.35em;
-    font-size: 40px;
-    margin: 0;
-  }
+}
+.hero h1 {
+  letter-spacing: 0.35em;
+  font-size: 40px;
+  margin: 0;
 }
 
 .content {
@@ -26,8 +25,9 @@
   display: flex;
   gap: 32px;
   align-items: flex-start;
-
-  @media (max-width: 992px) {
+}
+@media (max-width: 992px) {
+  .layout {
     flex-direction: column;
   }
 }
@@ -42,19 +42,17 @@
 
 .cartCard {
   flex: 1;
-
-  header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 24px;
-
-    h2 {
-      font-size: 20px;
-      letter-spacing: 0.1em;
-      margin: 0;
-    }
-  }
+}
+.cartCard header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+.cartCard header h2 {
+  font-size: 20px;
+  letter-spacing: 0.1em;
+  margin: 0;
 }
 
 .itemCount {
@@ -79,13 +77,13 @@
   padding-bottom: 16px;
   border-bottom: 1px solid #edf1f5;
   position: relative;
-
-  &:last-child {
-    border-bottom: none;
-    padding-bottom: 0;
-  }
-
-  @media (max-width: 640px) {
+}
+.itemRow:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+@media (max-width: 640px) {
+  .itemRow {
     grid-template-columns: 100px 1fr;
     grid-template-rows: auto auto;
     gap: 12px;
@@ -99,20 +97,18 @@
   display: flex;
   align-items: center;
   justify-content: center;
-
-  :global(img) {
-    object-fit: contain;
-    width: 100%;
-    height: auto;
-  }
+}
+.itemImage :global(img) {
+  -o-object-fit: contain;
+     object-fit: contain;
+  width: 100%;
+  height: auto;
 }
 
-.itemInfo {
-  h3 {
-    font-size: 16px;
-    margin: 8px 0 6px;
-    color: black;
-  }
+.itemInfo h3 {
+  font-size: 16px;
+  margin: 8px 0 6px;
+  color: black;
 }
 
 .badge {
@@ -143,22 +139,20 @@
   border: 1px solid #e5e9f0;
   border-radius: 999px;
   padding: 6px 14px;
-
-  button {
-    border: none;
-    background: none;
-    font-size: 18px;
-    line-height: 1;
-    cursor: pointer;
-    color: black;
-  }
-
-  span {
-    min-width: 24px;
-    text-align: center;
-    font-weight: 600;
-    color: black;
-  }
+}
+.quantityControl button {
+  border: none;
+  background: none;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  color: black;
+}
+.quantityControl span {
+  min-width: 24px;
+  text-align: center;
+  font-weight: 600;
+  color: black;
 }
 
 .removeBtn {
@@ -167,8 +161,9 @@
   color: #b5b5b5;
   font-size: 16px;
   cursor: pointer;
-
-  @media (max-width: 640px) {
+}
+@media (max-width: 640px) {
+  .removeBtn {
     position: absolute;
     top: 0;
     right: 0;
@@ -177,18 +172,16 @@
 
 .summaryCard {
   width: 320px;
-
-  h3 {
-    letter-spacing: 0.2em;
-    font-size: 18px;
-    margin-bottom: 20px;
-    color: black;
-  }
-
-  select {
-    border-radius: 12px;
-    border-color: #111;
-  }
+}
+.summaryCard h3 {
+  letter-spacing: 0.2em;
+  font-size: 18px;
+  margin-bottom: 20px;
+  color: black;
+}
+.summaryCard select {
+  border-radius: 12px;
+  border-color: #111;
 }
 
 .summaryRow,
@@ -206,10 +199,9 @@
   padding-top: 16px;
   border-top: 1px solid #eceff4;
   font-size: 18px;
-
-  strong {
-    font-size: 20px;
-  }
+}
+.totalRow strong {
+  font-size: 20px;
 }
 
 .checkoutBtn {
@@ -254,4 +246,4 @@
   font-size: 12px;
   color: #7a7a7a;
   margin: 6px 0 0;
-}
+}/*# sourceMappingURL=cart.module.css.map */

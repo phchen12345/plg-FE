@@ -1,0 +1,79 @@
+@charset "UTF-8";
+@font-face {
+  font-family: "Worker";
+  src: url("/fonts/Worker-Bold.woff2") format("woff2");
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+}
+.standing {
+  color: #fff;
+  min-width: 1280px;
+}
+.standing .p1 {
+  font-size: 14px;
+  text-align: center;
+  padding: 0.75rem 0;
+  margin-bottom: 0;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  background: transparent;
+}
+.standing table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #252525;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 14px;
+}
+.standing thead {
+  background: #1b1b1b;
+  text-transform: uppercase;
+}
+.standing thead th {
+  padding: 0.9rem 0.8rem;
+  font-weight: 600;
+  font-size: 12px;
+}
+.standing thead th:nth-child(-n+2) {
+  font-size: 14px;
+}
+.standing thead th:nth-child(2) {
+  text-align: center;
+}
+.standing tbody tr {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+.standing tbody tr:nth-child(odd) {
+  background: #2f2f2f;
+}
+.standing tbody tr td {
+  padding: 0.6rem 0.4rem;
+  text-align: center;
+}
+.standing tbody tr td:first-child {
+  font-weight: 700;
+}
+.standing tbody tr td:nth-child(2) {
+  text-align: left;
+}
+
+.teamCell {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: #bb986c;
+}
+.teamCell span {
+  font-weight: 600;
+}
+
+.standing-title {
+  font-family: "Worker", "Noto Sans TC", sans-serif;
+  font-weight: 800;
+  /* 其他樣式同前 */
+}
+
+.title-zh {
+  font-family: "niveau-grotesk", "Rubik", sans-serif;
+}/*# sourceMappingURL=standing.module.css.map */
