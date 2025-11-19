@@ -1,14 +1,18 @@
-﻿// src/app/payment/page.tsx
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import styles from "./payment.module.scss";
 import { CartItem, fetchCart } from "@/api/cart/cart_api";
-import { requestStoreMapToken, createOrder } from "@/api/payment/payment_api";
+import {
+  requestStoreMapToken,
+  createOrder,
+  createCheckoutSession,
+} from "@/api/payment/payment_api";
 
 type ShippingMethod = "home" | "familymart" | "seveneleven";
+type PaymentMethod = "cod" | "card";
 
 type SelectedStore = {
   id: string;
@@ -53,12 +57,18 @@ const SHIPPING_METHODS = [
   },
 ];
 
+const PAYMENT_OPTIONS = [
+  { value: "cod", label: "貨到付款" },
+  { value: "card", label: "線上刷卡（前往 Shopify）" },
+];
+
 const currency = (cents = 0) =>
   `NTD ${cents.toLocaleString("zh-TW", { minimumFractionDigits: 0 })}`;
 
 export default function PaymentPage() {
   const [items, setItems] = useState<CartItem[]>([]);
   const [method, setMethod] = useState<ShippingMethod>("home");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cod");
   const [address, setAddress] = useState({
     city: "",
     district: "",
@@ -131,9 +141,7 @@ export default function PaymentPage() {
       if (!raw) return;
       try {
         const parsed = JSON.parse(raw) as SelectedStore;
-        if (parsed?.id) {
-          setSelectedStore(parsed);
-        }
+        if (parsed?.id) setSelectedStore(parsed);
       } catch {
       } finally {
         window.localStorage.removeItem(STORAGE_KEY);
@@ -151,9 +159,7 @@ export default function PaymentPage() {
         ...THIRD_PARTY_PICKER_HOSTS,
         window.location.hostname,
       ].filter(Boolean);
-      if (!allowedHosts.some((domain) => hostname.endsWith(domain))) {
-        return;
-      }
+      if (!allowedHosts.some((domain) => hostname.endsWith(domain))) return;
       applyStoreSelection(event.data ?? {});
     };
 
@@ -161,7 +167,6 @@ export default function PaymentPage() {
     window.addEventListener("focus", syncStore);
     window.addEventListener("message", handleMessage);
     syncStore();
-
     return () => {
       window.removeEventListener("storage", syncStore);
       window.removeEventListener("focus", syncStore);
@@ -170,9 +175,7 @@ export default function PaymentPage() {
   }, [applyStoreSelection]);
 
   useEffect(() => {
-    if (method === "home") {
-      setSelectedStore(null);
-    }
+    if (method === "home") setSelectedStore(null);
   }, [method]);
 
   useEffect(() => {
@@ -190,7 +193,7 @@ export default function PaymentPage() {
     storePopupRef.current?.close();
     const popup = window.open("", PICKER_WINDOW_NAME, PICKER_WINDOW_FEATURES);
     if (!popup) {
-      setError("請允許瀏覽器彈出視窗以選擇門市");
+      setError("請允許瀏覽器跳出視窗以選擇門市");
       return;
     }
     storePopupRef.current = popup;
@@ -226,7 +229,7 @@ export default function PaymentPage() {
     } catch (err) {
       popup.close();
       setError(
-        err instanceof Error ? err.message : "無法開啟超商選擇，請稍後重試"
+        err instanceof Error ? err.message : "無法開啟門市選擇，請稍後重試"
       );
     } finally {
       setPickerLoading(false);
@@ -247,6 +250,47 @@ export default function PaymentPage() {
     try {
       setError("");
       setSubmitting(true);
+
+      if (paymentMethod === "card") {
+        const lines = items
+          .map((item) => ({
+            merchandiseId: `gid://shopify/ProductVariant/${item.productId}`,
+            quantity: item.quantity,
+          }))
+          .filter((line) => !!line.merchandiseId);
+
+        if (!lines.length) {
+          setError("缺少商品資料，無法建立結帳");
+          setSubmitting(false);
+          return;
+        }
+
+        const customAttributes = [
+          { key: "shipping_method", value: method },
+          method !== "home" && selectedStore
+            ? { key: "store_id", value: selectedStore.id }
+            : null,
+        ].filter(Boolean) as { key: string; value: string }[];
+
+        const shippingAddress =
+          method === "home"
+            ? {
+                address1: address.detail,
+                city: address.city,
+                province: address.district,
+                country: "TW",
+              }
+            : undefined;
+
+        const { checkoutUrl } = await createCheckoutSession({
+          lines,
+          customAttributes,
+          shippingAddress,
+        });
+        window.location.href = checkoutUrl;
+        return;
+      }
+
       await createOrder({
         items,
         shipping: {
@@ -255,7 +299,7 @@ export default function PaymentPage() {
           store: method === "home" ? null : selectedStore,
         },
       });
-      router.push("/orders");
+      router.push("/payment/confirm");
     } catch (err) {
       setError(err instanceof Error ? err.message : "無法建立訂單");
     } finally {
@@ -317,6 +361,33 @@ export default function PaymentPage() {
                 </span>
               </label>
             ))}
+          </div>
+
+          <div className={styles.paymentOptions}>
+            <p className={styles.sectionTitle}>付款方式</p>
+            <div className={styles.shippingOptions}>
+              {PAYMENT_OPTIONS.map((option) => (
+                <label
+                  key={option.value}
+                  className={`${styles.shippingOption} ${
+                    paymentMethod === option.value ? styles.active : ""
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="payment"
+                    value={option.value}
+                    checked={paymentMethod === option.value}
+                    onChange={() =>
+                      setPaymentMethod(option.value as PaymentMethod)
+                    }
+                  />
+                  <div>
+                    <p className={styles.optionTitle}>{option.label}</p>
+                  </div>
+                </label>
+              ))}
+            </div>
           </div>
 
           {method === "home" && (

@@ -35,6 +35,22 @@ export type CreateOrderRequest = {
 
 export type CreateOrderResponse = { orderId: number; order: unknown };
 
+export type CreateCheckoutRequest = {
+  lines: {
+    merchandiseId: string;
+    quantity: number;
+    attributes?: { key: string; value: string }[];
+  }[];
+  customAttributes?: { key: string; value: string }[];
+  buyerIdentity?: Record<string, unknown>;
+  shippingAddress?: Record<string, unknown>;
+};
+
+export type CreateCheckoutResponse = {
+  checkoutUrl: string;
+  cartId: string;
+};
+
 const paymentClient = axios.create({
   baseURL: API_BASE_URL,
   withCredentials: true,
@@ -61,6 +77,20 @@ export async function requestStoreMapToken(
         logisticsSubType: payload.logisticsSubType,
         extraData: payload.extraData ?? "",
       }
+    );
+    return data;
+  } catch (err) {
+    throw new Error(extractMessage(err));
+  }
+}
+
+export async function createCheckoutSession(
+  payload: CreateCheckoutRequest
+): Promise<CreateCheckoutResponse> {
+  try {
+    const { data } = await paymentClient.post<CreateCheckoutResponse>(
+      "/api/storefront/checkout",
+      payload
     );
     return data;
   } catch (err) {
