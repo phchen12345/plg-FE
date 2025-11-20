@@ -15,6 +15,7 @@ export type CartItem = {
   priceCents?: number;
   imageUrl?: string | null;
   tag?: string | null;
+  shopifyVariantId?: number | null;
 };
 
 export type AddCartResponse = {

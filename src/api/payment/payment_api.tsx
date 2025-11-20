@@ -51,6 +51,26 @@ export type CreateCheckoutResponse = {
   cartId: string;
 };
 
+export type ShopifyVariant = {
+  id: number;
+  gid: string;
+  title: string;
+  sku: string | null;
+};
+
+//綠界
+export type EcpayCheckoutRequest = {
+  tradeNo: string;
+  totalAmount: string;
+  description?: string;
+  returnURL?: string;
+};
+
+export type EcpayCheckoutResponse = {
+  action: string;
+  fields: Record<string, string>;
+};
+
 const paymentClient = axios.create({
   baseURL: API_BASE_URL,
   withCredentials: true,
@@ -104,6 +124,35 @@ export async function createOrder(
   try {
     const { data } = await paymentClient.post<CreateOrderResponse>(
       "/api/orders/orders",
+      payload
+    );
+    return data;
+  } catch (err) {
+    throw new Error(extractMessage(err));
+  }
+}
+
+export async function fetchShopifyVariants(
+  productId: number
+): Promise<ShopifyVariant[]> {
+  try {
+    const { data } = await paymentClient.get<{
+      productId: number;
+      variants: ShopifyVariant[];
+    }>(`/api/shopify/products/${productId}/variants`);
+
+    return data.variants;
+  } catch (err) {
+    throw new Error(extractMessage(err));
+  }
+}
+
+export async function createEcpayCheckout(
+  payload: EcpayCheckoutRequest
+): Promise<EcpayCheckoutResponse> {
+  try {
+    const { data } = await paymentClient.post<EcpayCheckoutResponse>(
+      "/api/ecpay/checkout",
       payload
     );
     return data;

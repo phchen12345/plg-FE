@@ -9,10 +9,12 @@ import {
   requestStoreMapToken,
   createOrder,
   createCheckoutSession,
+  fetchShopifyVariants,
+  createEcpayCheckout,
 } from "@/api/payment/payment_api";
 
 type ShippingMethod = "home" | "familymart" | "seveneleven";
-type PaymentMethod = "cod" | "card";
+type PaymentMethod = "cod" | "card" | "ecpay";
 
 type SelectedStore = {
   id: string;
@@ -60,6 +62,7 @@ const SHIPPING_METHODS = [
 const PAYMENT_OPTIONS = [
   { value: "cod", label: "貨到付款" },
   { value: "card", label: "線上刷卡（前往 Shopify）" },
+  { value: "ecpay", label: "綠界金流" },
 ];
 
 const currency = (cents = 0) =>
@@ -275,6 +278,32 @@ export default function PaymentPage() {
           attributes,
         });
         window.location.href = checkoutUrl;
+        // 原本導到 Shopify checkout 的程式
+      } else if (paymentMethod === "ecpay") {
+        const tradeNo = `EC${Date.now()}`;
+        const totalAmount = String(total); // 如果 total 是分 → 轉成元
+
+        const { action, fields } = await createEcpayCheckout({
+          tradeNo,
+          totalAmount,
+          description: "PLGorder",
+        });
+
+        const form = document.createElement("form");
+        form.method = "POST";
+        form.action = action;
+
+        Object.entries(fields).forEach(([key, value]) => {
+          const input = document.createElement("input");
+          input.type = "hidden";
+          input.name = key;
+          input.value = value;
+          form.appendChild(input);
+        });
+
+        document.body.appendChild(form);
+        form.submit();
+        document.body.removeChild(form);
         return;
       }
 
