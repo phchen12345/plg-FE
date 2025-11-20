@@ -265,27 +265,14 @@ export default function PaymentPage() {
           return;
         }
 
-        const customAttributes = [
+        const attributes = [
           { key: "shipping_method", value: method },
-          method !== "home" && selectedStore
-            ? { key: "store_id", value: selectedStore.id }
-            : null,
-        ].filter(Boolean) as { key: string; value: string }[];
-
-        const shippingAddress =
-          method === "home"
-            ? {
-                address1: address.detail,
-                city: address.city,
-                province: address.district,
-                country: "TW",
-              }
-            : undefined;
+          // …其他要存的資訊
+        ];
 
         const { checkoutUrl } = await createCheckoutSession({
           lines,
-          customAttributes,
-          shippingAddress,
+          attributes,
         });
         window.location.href = checkoutUrl;
         return;

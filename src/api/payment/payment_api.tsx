@@ -41,9 +41,9 @@ export type CreateCheckoutRequest = {
     quantity: number;
     attributes?: { key: string; value: string }[];
   }[];
-  customAttributes?: { key: string; value: string }[];
+  attributes?: { key: string; value: string }[];
   buyerIdentity?: Record<string, unknown>;
-  shippingAddress?: Record<string, unknown>;
+  note?: string;
 };
 
 export type CreateCheckoutResponse = {
