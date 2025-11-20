@@ -1,4 +1,4 @@
-import axios from "axios";
+﻿import axios from "axios";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:3001";
@@ -58,17 +58,45 @@ export type ShopifyVariant = {
   sku: string | null;
 };
 
-//綠界
+export type EcpayCheckoutResponse = {
+  action: string;
+  fields: Record<string, string>;
+};
+
+export type EcpayCheckoutOrderItem = {
+  productId: number;
+  quantity: number;
+  name?: string;
+  priceCents?: number;
+  shopifyVariantId?: string | number | null;
+};
+
+type SelectedStore = {
+  id: string;
+  name: string;
+  address: string;
+  phone?: string;
+  logisticsSubType?: string;
+};
+
+export type EcpayCheckoutOrderShipping = {
+  method: "home" | "familymart" | "seveneleven";
+  address?: { city: string; district: string; detail: string };
+  store?: SelectedStore | null;
+};
+
+export type EcpayCheckoutOrder = {
+  items: EcpayCheckoutOrderItem[];
+  shipping: EcpayCheckoutOrderShipping;
+  totals: { subtotal: number; shippingFee: number; total: number };
+};
+
 export type EcpayCheckoutRequest = {
   tradeNo: string;
   totalAmount: string;
   description?: string;
   returnURL?: string;
-};
-
-export type EcpayCheckoutResponse = {
-  action: string;
-  fields: Record<string, string>;
+  order: EcpayCheckoutOrder;
 };
 
 const paymentClient = axios.create({
@@ -81,10 +109,10 @@ const paymentClient = axios.create({
 const extractMessage = (err: unknown) => {
   if (axios.isAxiosError(err)) {
     return (
-      err.response?.data?.message || err.message || "無法取得回應，請稍後重試"
+      err.response?.data?.message || err.message || "?��??��??��?，�?稍�??�試"
     );
   }
-  return err instanceof Error ? err.message : "發生未知錯誤";
+  return err instanceof Error ? err.message : "?��??�知?�誤";
 };
 
 export async function requestStoreMapToken(
@@ -160,3 +188,4 @@ export async function createEcpayCheckout(
     throw new Error(extractMessage(err));
   }
 }
+

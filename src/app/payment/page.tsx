@@ -257,7 +257,7 @@ export default function PaymentPage() {
       if (paymentMethod === "card") {
         const lines = items
           .map((item) => ({
-            merchandiseId: `gid://shopify/ProductVariant/${item.productId}`,
+            merchandiseId: `gid://shopify/ProductVariant/${item.shopifyVariantId}`,
             quantity: item.quantity,
           }))
           .filter((line) => !!line.merchandiseId);
@@ -280,19 +280,41 @@ export default function PaymentPage() {
         window.location.href = checkoutUrl;
         // 原本導到 Shopify checkout 的程式
       } else if (paymentMethod === "ecpay") {
+        if (method !== "home" && !selectedStore) {
+          setError("請先選擇超商門市");
+          setSubmitting(false);
+          return;
+        }
+
         const tradeNo = `EC${Date.now()}`;
-        const totalAmount = String(total); // 如果 total 是分 → 轉成元
+        const totalAmount = String(total);
+
+        const orderPayload = {
+          items: items.map((item) => ({
+            productId: item.productId,
+            quantity: item.quantity,
+            name: item.name,
+            priceCents: item.priceCents,
+            shopifyVariantId: item.shopifyVariantId,
+          })),
+          shipping: {
+            method,
+            address: method === "home" ? address : undefined,
+            store: method === "home" ? null : selectedStore,
+          },
+          totals: { subtotal, shippingFee, total },
+        };
 
         const { action, fields } = await createEcpayCheckout({
           tradeNo,
           totalAmount,
-          description: "PLGorder",
+          description: "PLG order",
+          order: orderPayload,
         });
 
         const form = document.createElement("form");
         form.method = "POST";
         form.action = action;
-
         Object.entries(fields).forEach(([key, value]) => {
           const input = document.createElement("input");
           input.type = "hidden";
@@ -300,7 +322,6 @@ export default function PaymentPage() {
           input.value = value;
           form.appendChild(input);
         });
-
         document.body.appendChild(form);
         form.submit();
         document.body.removeChild(form);
@@ -315,7 +336,7 @@ export default function PaymentPage() {
           store: method === "home" ? null : selectedStore,
         },
       });
-      router.push("/payment/confirm");
+      router.push("/payment/orders");
     } catch (err) {
       setError(err instanceof Error ? err.message : "無法建立訂單");
     } finally {
