@@ -289,6 +289,20 @@ export default function PaymentPage() {
         const tradeNo = `EC${Date.now()}`;
         const totalAmount = String(total);
 
+        const storePayload =
+          method === "home" || !selectedStore
+            ? null
+            : {
+                id: selectedStore.id,
+                name: selectedStore.name,
+                address: selectedStore.address,
+                phone: selectedStore.phone ?? "",
+                logisticsSubType:
+                  selectedStore.logisticsSubType ??
+                  METHOD_TO_SUBTYPE[method] ??
+                  "",
+              };
+
         const orderPayload = {
           items: items.map((item) => ({
             productId: item.productId,
@@ -299,8 +313,16 @@ export default function PaymentPage() {
           })),
           shipping: {
             method,
-            address: method === "home" ? address : undefined,
-            store: method === "home" ? null : selectedStore,
+            address:
+              method === "home"
+                ? {
+                    ...address,
+                    receiver:
+                      (address as any)?.receiver ??
+                      (items[0]?.name ?? "PLG Receiver"),
+                  }
+                : undefined,
+            store: storePayload,
           },
           totals: { subtotal, shippingFee, total },
         };
