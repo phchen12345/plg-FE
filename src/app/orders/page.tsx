@@ -1,14 +1,17 @@
-// src/app/orders/page.tsx
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import styles from "../payment/payment.module.scss";
-import { fetchOrders, OrderSummary } from "@/api/order/order_api";
+import {
+  fetchOrders,
+  OrderSummary,
+  requestFamiWaybillPrint,
+} from "@/api/order/order_api";
 
 const STATUS_LABEL: Record<string, string> = {
   pending: "待付款",
-  authorized: "授權中",
+  authorized: "已授權",
   paid: "已付款",
   partially_paid: "部分付款",
   refunded: "已退款",
@@ -18,7 +21,7 @@ const STATUS_LABEL: Record<string, string> = {
 const FULFILLMENT_LABEL: Record<string, string> = {
   fulfilled: "已出貨",
   partial: "部分出貨",
-  restocked: "退回入庫",
+  restocked: "已退回庫存",
 };
 
 const formatCurrency = (amount: string, currency = "TWD") => {
@@ -36,6 +39,7 @@ export default function OrdersPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [refreshing, setRefreshing] = useState(false);
+  const [printingOrderId, setPrintingOrderId] = useState<number | null>(null);
 
   const loadOrders = useCallback(async (isRefresh = false) => {
     try {
@@ -48,7 +52,7 @@ export default function OrdersPage() {
       setOrders(data);
       setError("");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "無法取得訂單資訊");
+      setError(err instanceof Error ? err.message : "無法取得訂單資料");
     } finally {
       if (isRefresh) {
         setRefreshing(false);
@@ -63,6 +67,54 @@ export default function OrdersPage() {
   }, [loadOrders]);
 
   const hasOrders = useMemo(() => orders.length > 0, [orders]);
+
+  const handlePrintWaybill = useCallback(
+    async (order: OrderSummary) => {
+      const defaultTradeNo = order.name?.startsWith("EC") ? order.name : "";
+      const merchantTradeNo =
+        window
+          .prompt(
+            "請輸入綠界物流訂單編號（例如 EC1234567890）",
+            defaultTradeNo
+          )
+          ?.trim() ?? "";
+
+      if (!merchantTradeNo) {
+        return;
+      }
+
+      try {
+        setPrintingOrderId(order.id);
+        const { action, fields } = await requestFamiWaybillPrint({
+          merchantTradeNo,
+        });
+
+        const form = document.createElement("form");
+        form.method = "POST";
+        form.action = action;
+        form.target = "_blank";
+
+        Object.entries(fields).forEach(([key, value]) => {
+          const input = document.createElement("input");
+          input.type = "hidden";
+          input.name = key;
+          input.value = value;
+          form.appendChild(input);
+        });
+
+        document.body.appendChild(form);
+        form.submit();
+        document.body.removeChild(form);
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : "無法建立託運單列印資料";
+        window.alert(message);
+      } finally {
+        setPrintingOrderId(null);
+      }
+    },
+    []
+  );
 
   if (loading) {
     return (
@@ -89,7 +141,7 @@ export default function OrdersPage() {
         <div className={styles.emptyState}>
           <p>目前沒有訂單紀錄</p>
           <Link href="/shop" className={styles.linkButton}>
-            前往選購
+            前往購物
           </Link>
         </div>
       </main>
@@ -108,7 +160,7 @@ export default function OrdersPage() {
               disabled={refreshing}
               style={{ minWidth: 120 }}
             >
-              {refreshing ? "更新中..." : "重新整理"}
+              {refreshing ? "重新整理中..." : "重新整理"}
             </button>
           </div>
           {orders.map((order) => (
@@ -151,21 +203,33 @@ export default function OrdersPage() {
 
               <footer className={styles.orderFooter}>
                 <p>
-                  合計：{" "}
+                  總計：
                   <strong>
                     {formatCurrency(order.totalPrice, order.currency)}
                   </strong>
                 </p>
-                {order.statusUrl && (
-                  <a
-                    href={order.statusUrl}
-                    target="_blank"
-                    rel="noreferrer"
+                <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+                  {order.statusUrl && (
+                    <a
+                      href={order.statusUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className={styles.linkButton}
+                    >
+                      查看 Shopify 訂單
+                    </a>
+                  )}
+                  <button
+                    type="button"
                     className={styles.linkButton}
+                    onClick={() => handlePrintWaybill(order)}
+                    disabled={printingOrderId === order.id}
                   >
-                    查看 Shopify 訂單
-                  </a>
-                )}
+                    {printingOrderId === order.id
+                      ? "產生託運單..."
+                      : "列印全家託運單"}
+                  </button>
+                </div>
               </footer>
             </article>
           ))}

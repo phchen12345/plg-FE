@@ -25,6 +25,17 @@ export type OrderSummary = {
   lineItems: OrderItem[];
 };
 
+export type PrintWaybillRequest = {
+  logisticsId?: string;
+  merchantTradeNo?: string;
+  preview?: boolean;
+};
+
+export type PrintWaybillResponse = {
+  action: string;
+  fields: Record<string, string>;
+};
+
 const orderClient = axios.create({
   baseURL: API_BASE_URL,
   withCredentials: true,
@@ -50,6 +61,20 @@ export async function fetchOrders(limit = 10): Promise<OrderSummary[]> {
       { params: { limit } }
     );
     return data.orders;
+  } catch (err) {
+    throw new Error(extractMessage(err));
+  }
+}
+
+export async function requestFamiWaybillPrint(
+  payload: PrintWaybillRequest
+): Promise<PrintWaybillResponse> {
+  try {
+    const { data } = await orderClient.post<PrintWaybillResponse>(
+      "/api/logistics/fami/print-waybill",
+      payload
+    );
+    return data;
   } catch (err) {
     throw new Error(extractMessage(err));
   }
