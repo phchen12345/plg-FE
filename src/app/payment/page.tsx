@@ -34,8 +34,8 @@ const THIRD_PARTY_PICKER_HOSTS = [
 ];
 const METHOD_TO_SUBTYPE: Record<ShippingMethod, string | null> = {
   home: null,
-  familymart: "FAMI",
-  seveneleven: "UNIMART",
+  familymart: "FAMIC2C",
+  seveneleven: "UNIMARTC2C",
 };
 
 const SHIPPING_METHODS = [
@@ -319,7 +319,8 @@ export default function PaymentPage() {
                     ...address,
                     receiver:
                       (address as any)?.receiver ??
-                      (items[0]?.name ?? "PLG Receiver"),
+                      items[0]?.name ??
+                      "PLG Receiver",
                   }
                 : undefined,
             store: storePayload,
