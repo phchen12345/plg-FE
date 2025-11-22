@@ -8,21 +8,45 @@ const STORAGE_KEY = "plg-selected-store";
 export default function StoreCallbackPage() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
+
+    const getParam = (...keys: string[]) => {
+      for (const key of keys) {
+        const value = params.get(key);
+        if (value && value.trim().length > 0) {
+          return value;
+        }
+      }
+      return null;
+    };
+
     const payload = {
-      storeid:
-        params.get("storeid") ??
-        params.get("storeId") ??
-        params.get("CVSStoreID"),
-      storename:
-        params.get("storename") ??
-        params.get("storeName") ??
-        params.get("CVSStoreName"),
-      storeaddress:
-        params.get("storeaddress") ??
-        params.get("storeAddress") ??
-        params.get("CVSAddress"),
-      phone: params.get("phone") ?? params.get("CVSTelephone"),
-      logisticsSubType: params.get("LogisticsSubType"),
+      storeid: getParam(
+        "storeid",
+        "storeId",
+        "CVSStoreID",
+        "ReceiverStoreID",
+        "StoreID"
+      ),
+      storename: getParam(
+        "storename",
+        "storeName",
+        "CVSStoreName",
+        "ReceiverStoreName"
+      ),
+      storeaddress: getParam(
+        "storeaddress",
+        "storeAddress",
+        "CVSAddress",
+        "ReceiverAddress"
+      ),
+      phone: getParam(
+        "phone",
+        "CVSTelephone",
+        "ReceiverPhone",
+        "ReceiverCellPhone"
+      ),
+      logisticsSubType:
+        params.get("LogisticsSubType") ?? params.get("LogisticsSubtype"),
     };
 
     if (payload.storeid) {

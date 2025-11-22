@@ -13,6 +13,39 @@ export type LogisticsMapTokenRequest = {
   extraData?: string;
 };
 
+export type LogisticsV2SelectionRequest = {
+  logisticsSubType: string;
+  logisticsType?: string;
+  isCollection?: "Y" | "N";
+  extraData?: string;
+  selectionToken?: string;
+};
+
+export type LogisticsV2SelectionResponse = {
+  isHtml?: boolean;
+  html?: string;
+  PlatformID?: string;
+  MerchantID?: string;
+  RqHeader?: { Timestamp?: string };
+  TransCode?: number;
+  TransMsg?: string;
+  Data?: string | Record<string, unknown>;
+  ParsedData?: Record<string, unknown>;
+  selectionToken?: string;
+};
+
+export type LogisticsSelectionResult = {
+  store?: {
+    storeId: string;
+    storeName?: string;
+    storeAddress?: string;
+    receiverPhone?: string;
+    receiverCellPhone?: string;
+    logisticsSubType?: string;
+    raw?: Record<string, unknown>;
+  };
+};
+
 export type CreateOrderRequest = {
   items: {
     productId: number;
@@ -110,6 +143,42 @@ export async function requestStoreMapToken(
     );
     return data;
   } catch (err) {
+    throw new Error(extractMessage(err));
+  }
+}
+
+export async function requestLogisticsV2Selection(
+  payload: LogisticsV2SelectionRequest
+): Promise<LogisticsV2SelectionResponse> {
+  try {
+    const { data } = await paymentClient.post<LogisticsV2SelectionResponse>(
+      "/api/logistics-new/selection",
+      {
+        logisticsSubType: payload.logisticsSubType,
+        logisticsType: payload.logisticsType ?? "CVS",
+        isCollection: payload.isCollection ?? "N",
+        extraData: payload.extraData ?? "",
+        selectionToken: payload.selectionToken ?? "",
+      }
+    );
+    return data;
+  } catch (err) {
+    throw new Error(extractMessage(err));
+  }
+}
+
+export async function fetchLogisticsSelectionResult(
+  token: string
+): Promise<LogisticsSelectionResult | null> {
+  try {
+    const { data } = await paymentClient.get<LogisticsSelectionResult>(
+      `/api/logistics-new/selection-result/${token}`
+    );
+    return data;
+  } catch (err) {
+    if (axios.isAxiosError(err) && err.response?.status === 404) {
+      return null;
+    }
     throw new Error(extractMessage(err));
   }
 }
