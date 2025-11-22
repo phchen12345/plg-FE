@@ -35,22 +35,6 @@ export type CreateOrderRequest = {
 
 export type CreateOrderResponse = { orderId: number; order: unknown };
 
-export type CreateCheckoutRequest = {
-  lines: {
-    merchandiseId: string;
-    quantity: number;
-    attributes?: { key: string; value: string }[];
-  }[];
-  attributes?: { key: string; value: string }[];
-  buyerIdentity?: Record<string, unknown>;
-  note?: string;
-};
-
-export type CreateCheckoutResponse = {
-  checkoutUrl: string;
-  cartId: string;
-};
-
 export type ShopifyVariant = {
   id: number;
   gid: string;
@@ -108,11 +92,9 @@ const paymentClient = axios.create({
 
 const extractMessage = (err: unknown) => {
   if (axios.isAxiosError(err)) {
-    return (
-      err.response?.data?.message || err.message || "?��??��??��?，�?稍�??�試"
-    );
+    return err.response?.data?.message || err.message;
   }
-  return err instanceof Error ? err.message : "?��??�知?�誤";
+  return err instanceof Error ? err.message : "未知錯誤";
 };
 
 export async function requestStoreMapToken(
@@ -125,20 +107,6 @@ export async function requestStoreMapToken(
         logisticsSubType: payload.logisticsSubType,
         extraData: payload.extraData ?? "",
       }
-    );
-    return data;
-  } catch (err) {
-    throw new Error(extractMessage(err));
-  }
-}
-
-export async function createCheckoutSession(
-  payload: CreateCheckoutRequest
-): Promise<CreateCheckoutResponse> {
-  try {
-    const { data } = await paymentClient.post<CreateCheckoutResponse>(
-      "/api/storefront/checkout",
-      payload
     );
     return data;
   } catch (err) {
@@ -160,21 +128,6 @@ export async function createOrder(
   }
 }
 
-export async function fetchShopifyVariants(
-  productId: number
-): Promise<ShopifyVariant[]> {
-  try {
-    const { data } = await paymentClient.get<{
-      productId: number;
-      variants: ShopifyVariant[];
-    }>(`/api/shopify/products/${productId}/variants`);
-
-    return data.variants;
-  } catch (err) {
-    throw new Error(extractMessage(err));
-  }
-}
-
 export async function createEcpayCheckout(
   payload: EcpayCheckoutRequest
 ): Promise<EcpayCheckoutResponse> {
@@ -188,4 +141,3 @@ export async function createEcpayCheckout(
     throw new Error(extractMessage(err));
   }
 }
-

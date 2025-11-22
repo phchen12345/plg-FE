@@ -68,53 +68,47 @@ export default function OrdersPage() {
 
   const hasOrders = useMemo(() => orders.length > 0, [orders]);
 
-  const handlePrintWaybill = useCallback(
-    async (order: OrderSummary) => {
-      const defaultTradeNo = order.name?.startsWith("EC") ? order.name : "";
-      const merchantTradeNo =
-        window
-          .prompt(
-            "請輸入綠界物流訂單編號（例如 EC1234567890）",
-            defaultTradeNo
-          )
-          ?.trim() ?? "";
+  const handlePrintWaybill = useCallback(async (order: OrderSummary) => {
+    const defaultTradeNo = order.name?.startsWith("EC") ? order.name : "";
+    const merchantTradeNo =
+      window
+        .prompt("請輸入綠界物流訂單編號（例如 EC1234567890）", defaultTradeNo)
+        ?.trim() ?? "";
 
-      if (!merchantTradeNo) {
-        return;
-      }
+    if (!merchantTradeNo) {
+      return;
+    }
 
-      try {
-        setPrintingOrderId(order.id);
-        const { action, fields } = await requestFamiWaybillPrint({
-          merchantTradeNo,
-        });
+    try {
+      setPrintingOrderId(order.id);
+      const { action, fields } = await requestFamiWaybillPrint({
+        merchantTradeNo,
+      });
 
-        const form = document.createElement("form");
-        form.method = "POST";
-        form.action = action;
-        form.target = "_blank";
+      const form = document.createElement("form");
+      form.method = "POST";
+      form.action = action;
+      form.target = "_blank";
 
-        Object.entries(fields).forEach(([key, value]) => {
-          const input = document.createElement("input");
-          input.type = "hidden";
-          input.name = key;
-          input.value = value;
-          form.appendChild(input);
-        });
+      Object.entries(fields).forEach(([key, value]) => {
+        const input = document.createElement("input");
+        input.type = "hidden";
+        input.name = key;
+        input.value = value;
+        form.appendChild(input);
+      });
 
-        document.body.appendChild(form);
-        form.submit();
-        document.body.removeChild(form);
-      } catch (err) {
-        const message =
-          err instanceof Error ? err.message : "無法建立託運單列印資料";
-        window.alert(message);
-      } finally {
-        setPrintingOrderId(null);
-      }
-    },
-    []
-  );
+      document.body.appendChild(form);
+      form.submit();
+      document.body.removeChild(form);
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "無法建立託運單列印資料";
+      window.alert(message);
+    } finally {
+      setPrintingOrderId(null);
+    }
+  }, []);
 
   if (loading) {
     return (

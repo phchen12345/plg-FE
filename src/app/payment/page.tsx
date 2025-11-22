@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -8,13 +8,11 @@ import { CartItem, fetchCart } from "@/api/cart/cart_api";
 import {
   requestStoreMapToken,
   createOrder,
-  createCheckoutSession,
-  fetchShopifyVariants,
   createEcpayCheckout,
 } from "@/api/payment/payment_api";
 
 type ShippingMethod = "home" | "familymart" | "seveneleven";
-type PaymentMethod = "cod" | "card" | "ecpay";
+type PaymentMethod = "cod" | "ecpay";
 
 type SelectedStore = {
   id: string;
@@ -61,8 +59,7 @@ const SHIPPING_METHODS = [
 
 const PAYMENT_OPTIONS = [
   { value: "cod", label: "貨到付款" },
-  { value: "card", label: "線上刷卡（前往 Shopify）" },
-  { value: "ecpay", label: "綠界金流" },
+  { value: "ecpay", label: "綠界支付" },
 ];
 
 const currency = (cents = 0) =>
@@ -253,33 +250,7 @@ export default function PaymentPage() {
     try {
       setError("");
       setSubmitting(true);
-
-      if (paymentMethod === "card") {
-        const lines = items
-          .map((item) => ({
-            merchandiseId: `gid://shopify/ProductVariant/${item.shopifyVariantId}`,
-            quantity: item.quantity,
-          }))
-          .filter((line) => !!line.merchandiseId);
-
-        if (!lines.length) {
-          setError("缺少商品資料，無法建立結帳");
-          setSubmitting(false);
-          return;
-        }
-
-        const attributes = [
-          { key: "shipping_method", value: method },
-          // …其他要存的資訊
-        ];
-
-        const { checkoutUrl } = await createCheckoutSession({
-          lines,
-          attributes,
-        });
-        window.location.href = checkoutUrl;
-        // 原本導到 Shopify checkout 的程式
-      } else if (paymentMethod === "ecpay") {
+      if (paymentMethod === "ecpay") {
         if (method !== "home" && !selectedStore) {
           setError("請先選擇超商門市");
           setSubmitting(false);
@@ -359,7 +330,7 @@ export default function PaymentPage() {
           store: method === "home" ? null : selectedStore,
         },
       });
-      router.push("/payment/orders");
+      router.push("/orders");
     } catch (err) {
       setError(err instanceof Error ? err.message : "無法建立訂單");
     } finally {
