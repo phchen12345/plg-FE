@@ -237,7 +237,7 @@ export default function OrdersPage() {
                 </ul>
 
                 <footer className={styles.orderFooter}>
-                  <p>
+                  <p className="text-[#fff] flex m-2">
                     總計：
                     <strong>
                       {formatCurrency(order.totalPrice, order.currency)}
