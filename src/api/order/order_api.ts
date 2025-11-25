@@ -21,8 +21,9 @@ export type OrderSummary = {
   currency: string;
   totalPrice: string;
   subtotalPrice: string;
-  statusUrl?: string;
   lineItems: OrderItem[];
+  shippingMethod?: "home" | "familymart" | "seveneleven" | string | null;
+  tags?: string | null;
 };
 
 export type PrintWaybillRequest = {
@@ -72,6 +73,20 @@ export async function requestFamiWaybillPrint(
   try {
     const { data } = await orderClient.post<PrintWaybillResponse>(
       "/api/logistics/fami/print-waybill",
+      payload
+    );
+    return data;
+  } catch (err) {
+    throw new Error(extractMessage(err));
+  }
+}
+
+export async function requestSevenWaybillPrint(
+  payload: PrintWaybillRequest
+): Promise<PrintWaybillResponse> {
+  try {
+    const { data } = await orderClient.post<PrintWaybillResponse>(
+      "/api/logistics/seven/print-waybill",
       payload
     );
     return data;

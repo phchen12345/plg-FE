@@ -9,8 +9,6 @@ import {
   requestStoreMapToken,
   createOrder,
   createEcpayCheckout,
-  requestLogisticsV2Selection,
-  fetchLogisticsSelectionResult,
 } from "@/api/payment/payment_api";
 
 type ShippingMethod = "home" | "familymart" | "seveneleven";
@@ -83,9 +81,6 @@ export default function PaymentPage() {
   const [loading, setLoading] = useState(true);
   const [pickerLoading, setPickerLoading] = useState(false);
   const [v2SelectionLoading, setV2SelectionLoading] = useState(false);
-  const [pendingSelectionToken, setPendingSelectionToken] = useState<
-    string | null
-  >(null);
   const [submitting, setSubmitting] = useState(false);
   const router = useRouter();
   const storePopupRef = useRef<Window | null>(null);
@@ -190,62 +185,6 @@ export default function PaymentPage() {
     };
   }, []);
 
-  useEffect(() => {
-    if (!pendingSelectionToken) return undefined;
-
-    let cancelled = false;
-    let attempts = 0;
-    const maxAttempts = 15;
-    let timer = 0;
-
-    const poll = async () => {
-      if (cancelled) return;
-      try {
-        const result = await fetchLogisticsSelectionResult(
-          pendingSelectionToken
-        );
-        if (result?.store?.storeId) {
-          applyStoreSelection({
-            storeid: result.store.storeId,
-            storename: result.store.storeName ?? result.store.storeId,
-            storeaddress: result.store.storeAddress ?? "",
-            phone:
-              result.store.receiverPhone ??
-              result.store.receiverCellPhone ??
-              "",
-            logisticsSubType: result.store.logisticsSubType ?? "",
-          });
-          setPendingSelectionToken(null);
-          return;
-        }
-      } catch (err) {
-        setPendingSelectionToken(null);
-        setError(
-          err instanceof Error
-            ? err.message
-            : "取得綠界門市資訊失敗，請重新選擇"
-        );
-        return;
-      }
-
-      attempts += 1;
-      if (attempts >= maxAttempts) {
-        setPendingSelectionToken(null);
-        setError("等待綠界門市資訊超時，請重新選擇門市");
-        return;
-      }
-      timer = window.setTimeout(poll, 2000);
-    };
-
-    timer = window.setTimeout(poll, 1000);
-    return () => {
-      cancelled = true;
-      if (timer) {
-        window.clearTimeout(timer);
-      }
-    };
-  }, [pendingSelectionToken, applyStoreSelection]);
-
   const openStorePicker = async () => {
     if (method === "home" || pickerLoading) return;
     const logisticsSubType = METHOD_TO_SUBTYPE[method];
@@ -295,78 +234,6 @@ export default function PaymentPage() {
       );
     } finally {
       setPickerLoading(false);
-    }
-  };
-
-  const openNewLogisticsSelection = async () => {
-    if (method === "home" || v2SelectionLoading) return;
-    const logisticsSubType = METHOD_TO_SUBTYPE[method];
-    if (!logisticsSubType) {
-      setError("請選擇超商配送方式");
-      return;
-    }
-    try {
-      setError("");
-      setV2SelectionLoading(true);
-      const generatedToken = `SEL${Date.now().toString(36)}${Math.random()
-        .toString(36)
-        .slice(2, 8)}`;
-      const resp = await requestLogisticsV2Selection({
-        logisticsSubType,
-        extraData: generatedToken,
-        selectionToken: generatedToken,
-      });
-
-      const finalToken = resp.selectionToken ?? generatedToken;
-
-      if (resp?.isHtml && resp.html) {
-        const popup =
-          window.open("", PICKER_WINDOW_NAME, PICKER_WINDOW_FEATURES) ??
-          window.open("", "_blank");
-        if (!popup) {
-          throw new Error("請允許瀏覽器跳出視窗以進入綠界選店頁");
-        }
-        popup.document.open();
-        popup.document.write(resp.html);
-        popup.document.close();
-        popup.focus();
-        setPendingSelectionToken(finalToken);
-        return;
-      }
-
-      if (resp?.TransCode !== 1) {
-        throw new Error(resp?.TransMsg || "綠界回傳錯誤");
-      }
-
-      const parsed =
-        resp?.ParsedData && typeof resp.ParsedData === "object"
-          ? (resp.ParsedData as Record<string, string>)
-          : resp?.Data
-          ? typeof resp.Data === "string"
-            ? (JSON.parse(resp.Data) as Record<string, string>)
-            : (resp.Data as Record<string, string>)
-          : null;
-
-      const redirectUrl =
-        parsed?.RedirectUrl ||
-        parsed?.RedirectURL ||
-        parsed?.ResultURL ||
-        parsed?.Redirecturl ||
-        "";
-
-      if (!redirectUrl) {
-        throw new Error("綠界回傳資料缺少 RedirectUrl");
-      }
-
-      window.open(redirectUrl, "_blank", "noopener");
-      setPendingSelectionToken(finalToken);
-    } catch (err) {
-      setPendingSelectionToken(null);
-      setError(
-        err instanceof Error ? err.message : "綠界新版物流呼叫失敗，請稍後再試"
-      );
-    } finally {
-      setV2SelectionLoading(false);
     }
   };
 
@@ -615,13 +482,6 @@ export default function PaymentPage() {
                 disabled={pickerLoading}
               >
                 {pickerLoading ? "門市載入中..." : "選擇取貨門市"}
-              </button>
-              <button
-                type="button"
-                onClick={openNewLogisticsSelection}
-                disabled={v2SelectionLoading}
-              >
-                {v2SelectionLoading ? "測試新版物流中..." : "測試綠界新版物流"}
               </button>
             </div>
           )}

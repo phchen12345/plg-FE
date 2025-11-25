@@ -7,7 +7,23 @@ import {
   fetchOrders,
   OrderSummary,
   requestFamiWaybillPrint,
+  requestSevenWaybillPrint,
 } from "@/api/order/order_api";
+
+type CvsCarrier = "familymart" | "seveneleven";
+
+const resolveShippingMethod = (order: OrderSummary): CvsCarrier | null => {
+  if (
+    order.shippingMethod === "familymart" ||
+    order.shippingMethod === "seveneleven"
+  ) {
+    return order.shippingMethod;
+  }
+  const tagSource = order.tags?.toLowerCase() ?? "";
+  if (tagSource.includes("plg-cvs-seveneleven")) return "seveneleven";
+  if (tagSource.includes("plg-cvs-familymart")) return "familymart";
+  return null;
+};
 
 const STATUS_LABEL: Record<string, string> = {
   pending: "待付款",
@@ -68,47 +84,52 @@ export default function OrdersPage() {
 
   const hasOrders = useMemo(() => orders.length > 0, [orders]);
 
-  const handlePrintWaybill = useCallback(async (order: OrderSummary) => {
-    const defaultTradeNo = order.name?.startsWith("EC") ? order.name : "";
-    const merchantTradeNo =
-      window
-        .prompt("請輸入綠界物流訂單編號（例如 EC1234567890）", defaultTradeNo)
-        ?.trim() ?? "";
+  const handlePrintWaybill = useCallback(
+    async (order: OrderSummary, carrier: CvsCarrier) => {
+      const defaultTradeNo = order.name?.startsWith("EC") ? order.name : "";
+      const merchantTradeNo =
+        window
+          .prompt("請輸入綠界物流訂單編號（例如 EC1234567890）", defaultTradeNo)
+          ?.trim() ?? "";
 
-    if (!merchantTradeNo) {
-      return;
-    }
+      if (!merchantTradeNo) {
+        return;
+      }
 
-    try {
-      setPrintingOrderId(order.id);
-      const { action, fields } = await requestFamiWaybillPrint({
-        merchantTradeNo,
-      });
+      try {
+        setPrintingOrderId(order.id);
+        const api =
+          carrier === "seveneleven"
+            ? requestSevenWaybillPrint
+            : requestFamiWaybillPrint;
+        const { action, fields } = await api({ merchantTradeNo });
 
-      const form = document.createElement("form");
-      form.method = "POST";
-      form.action = action;
-      form.target = "_blank";
+        const form = document.createElement("form");
+        form.method = "POST";
+        form.action = action;
+        form.target = "_blank";
 
-      Object.entries(fields).forEach(([key, value]) => {
-        const input = document.createElement("input");
-        input.type = "hidden";
-        input.name = key;
-        input.value = value;
-        form.appendChild(input);
-      });
+        Object.entries(fields).forEach(([key, value]) => {
+          const input = document.createElement("input");
+          input.type = "hidden";
+          input.name = key;
+          input.value = value;
+          form.appendChild(input);
+        });
 
-      document.body.appendChild(form);
-      form.submit();
-      document.body.removeChild(form);
-    } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "無法建立託運單列印資料";
-      window.alert(message);
-    } finally {
-      setPrintingOrderId(null);
-    }
-  }, []);
+        document.body.appendChild(form);
+        form.submit();
+        document.body.removeChild(form);
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : "無法建立託運單列印資料";
+        window.alert(message);
+      } finally {
+        setPrintingOrderId(null);
+      }
+    },
+    []
+  );
 
   if (loading) {
     return (
@@ -157,76 +178,81 @@ export default function OrdersPage() {
               {refreshing ? "重新整理中..." : "重新整理"}
             </button>
           </div>
-          {orders.map((order) => (
-            <article key={order.id} className={styles.orderCard}>
-              <header className={styles.orderCardHeader}>
-                <div>
-                  <p className={styles.orderNumber}>{order.name}</p>
-                  <p className={styles.orderDate}>
-                    {new Date(order.createdAt).toLocaleString("zh-TW")}
-                  </p>
-                </div>
-                <div className={styles.orderStatus}>
-                  <span>
-                    付款狀態：
-                    {STATUS_LABEL[order.financialStatus] ??
-                      order.financialStatus}
-                  </span>
-                  <span>
-                    出貨狀態：
-                    {order.fulfillmentStatus
-                      ? FULFILLMENT_LABEL[order.fulfillmentStatus] ??
-                        order.fulfillmentStatus
-                      : "尚未出貨"}
-                  </span>
-                </div>
-              </header>
-
-              <ul className={styles.orderItems}>
-                {order.lineItems.map((item) => (
-                  <li key={item.id}>
+          {orders.map((order) => {
+            const shippingMethod = resolveShippingMethod(order);
+            return (
+              <article key={order.id} className={styles.orderCard}>
+                <header className={styles.orderCardHeader}>
+                  <div>
+                    <p className={styles.orderNumber}>{order.name}</p>
+                    <p className={styles.orderDate}>
+                      {new Date(order.createdAt).toLocaleString("zh-TW")}
+                    </p>
+                  </div>
+                  <div className={styles.orderStatus}>
                     <span>
-                      {item.title} × {item.quantity}
+                      付款狀態：
+                      {STATUS_LABEL[order.financialStatus] ??
+                        order.financialStatus}
                     </span>
+                    <span>
+                      出貨狀態：
+                      {order.fulfillmentStatus
+                        ? FULFILLMENT_LABEL[order.fulfillmentStatus] ??
+                          order.fulfillmentStatus
+                        : "尚未出貨"}
+                    </span>
+                  </div>
+                </header>
+                <ul className={styles.orderItems}>
+                  {order.lineItems.map((item) => (
+                    <li key={item.id}>
+                      <span>
+                        {item.title} × {item.quantity}
+                      </span>
+                      <strong>
+                        {formatCurrency(item.price, order.currency)}
+                      </strong>
+                    </li>
+                  ))}
+                </ul>
+                <footer className={styles.orderFooter}>
+                  <p>
+                    總計：
                     <strong>
-                      {formatCurrency(item.price, order.currency)}
+                      {formatCurrency(order.totalPrice, order.currency)}
                     </strong>
-                  </li>
-                ))}
-              </ul>
-
-              <footer className={styles.orderFooter}>
-                <p>
-                  總計：
-                  <strong>
-                    {formatCurrency(order.totalPrice, order.currency)}
-                  </strong>
-                </p>
-                <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-                  {order.statusUrl && (
-                    <a
-                      href={order.statusUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className={styles.linkButton}
-                    >
-                      查看 Shopify 訂單
-                    </a>
-                  )}
-                  <button
-                    type="button"
-                    className={styles.linkButton}
-                    onClick={() => handlePrintWaybill(order)}
-                    disabled={printingOrderId === order.id}
-                  >
-                    {printingOrderId === order.id
-                      ? "產生託運單..."
-                      : "列印全家託運單"}
-                  </button>
-                </div>
-              </footer>
-            </article>
-          ))}
+                  </p>
+                  <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+                    {shippingMethod === "familymart" && (
+                      <button
+                        type="button"
+                        className={styles.linkButton}
+                        onClick={() => handlePrintWaybill(order, "familymart")}
+                        disabled={printingOrderId === order.id}
+                      >
+                        {printingOrderId === order.id
+                          ? "產生託運單..."
+                          : "列印全家託運單"}
+                      </button>
+                    )}
+                    {shippingMethod === "seveneleven" && (
+                      <button
+                        type="button"
+                        className={styles.linkButton}
+                        onClick={() => handlePrintWaybill(order, "seveneleven")}
+                        disabled={printingOrderId === order.id}
+                      >
+                        {printingOrderId === order.id
+                          ? "產生託運單..."
+                          : "列印 7-11 託運單"}
+                      </button>
+                    )}
+                  </div>
+                </footer>
+              </article>
+            );
+          })}
         </div>
       </section>
     </main>
