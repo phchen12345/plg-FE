@@ -59,22 +59,16 @@ export default function OrdersPage() {
 
   const loadOrders = useCallback(async (isRefresh = false) => {
     try {
-      if (isRefresh) {
-        setRefreshing(true);
-      } else {
-        setLoading(true);
-      }
+      if (isRefresh) setRefreshing(true);
+      else setLoading(true);
       const data = await fetchOrders(20);
       setOrders(data);
       setError("");
     } catch (err) {
       setError(err instanceof Error ? err.message : "無法取得訂單資料");
     } finally {
-      if (isRefresh) {
-        setRefreshing(false);
-      } else {
-        setLoading(false);
-      }
+      if (isRefresh) setRefreshing(false);
+      else setLoading(false);
     }
   }, []);
 
@@ -86,13 +80,9 @@ export default function OrdersPage() {
 
   const handlePrintWaybill = useCallback(
     async (order: OrderSummary, carrier: CvsCarrier) => {
-      const defaultTradeNo = order.name?.startsWith("EC") ? order.name : "";
-      const merchantTradeNo =
-        window
-          .prompt("請輸入綠界物流訂單編號（例如 EC1234567890）", defaultTradeNo)
-          ?.trim() ?? "";
-
+      const merchantTradeNo = order.merchantTradeNo ?? order.name ?? "";
       if (!merchantTradeNo) {
+        window.alert("找不到對應的綠界物流訂單編號");
         return;
       }
 
@@ -178,6 +168,7 @@ export default function OrdersPage() {
               {refreshing ? "重新整理中..." : "重新整理"}
             </button>
           </div>
+
           {orders.map((order) => {
             const shippingMethod = resolveShippingMethod(order);
             return (
@@ -204,6 +195,7 @@ export default function OrdersPage() {
                     </span>
                   </div>
                 </header>
+
                 <ul className={styles.orderItems}>
                   {order.lineItems.map((item) => (
                     <li key={item.id}>
@@ -216,6 +208,7 @@ export default function OrdersPage() {
                     </li>
                   ))}
                 </ul>
+
                 <footer className={styles.orderFooter}>
                   <p>
                     總計：

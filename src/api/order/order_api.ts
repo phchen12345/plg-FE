@@ -23,6 +23,7 @@ export type OrderSummary = {
   subtotalPrice: string;
   lineItems: OrderItem[];
   shippingMethod?: "home" | "familymart" | "seveneleven" | string | null;
+  merchantTradeNo?: string;
   tags?: string | null;
 };
 
