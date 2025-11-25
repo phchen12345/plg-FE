@@ -10,8 +10,8 @@ import { useAuthStore } from "@/store/userAuthStore";
 import { loginAsGuest, startGoogleLogin } from "@/api/login/login_api";
 import { fetchCurrentUser } from "@/api/auth/api_auth";
 
-const ADMIN_EMAIL = process.env.NEXT_PUBLIC_ADMIN_EMAIL ?? "";
-const ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD ?? "";
+const ADMIN_EMAIL = process.env.NEXT_PUBLIC_ADMIN_EMAIL ?? "admin@example.com";
+const ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD ?? "123456";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
