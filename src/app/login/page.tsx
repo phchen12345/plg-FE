@@ -1,5 +1,5 @@
 "use client";
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useState } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import styles from "./login.module.scss";
 import Image from "next/image";
@@ -8,6 +8,7 @@ import { useCart } from "@/context/CartContext";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/userAuthStore";
 import { loginAsGuest, startGoogleLogin } from "@/api/login/login_api";
+import { fetchCurrentUser } from "@/api/auth/api_auth";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -40,10 +41,17 @@ export default function LoginPage() {
         const errBody = await response.json().catch(() => null);
         throw new Error(errBody?.message ?? "登入失敗");
       }
-      const data = await response.json();
+
+      // 取得會員資料含 isAdmin
+      const me = await fetchCurrentUser();
+
       const count = await fetchCartItemCount();
       dispatch({ type: "SET_COUNT", payload: count });
-      loginStore({ id: data.userId, email });
+      loginStore({
+        id: me.userId,
+        email: me.email,
+        isAdmin: Boolean(me.isAdmin),
+      });
       router.push("/");
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "登入失敗，請稍後再試");
@@ -59,7 +67,11 @@ export default function LoginPage() {
       const data = await loginAsGuest();
       const count = await fetchCartItemCount();
       dispatch({ type: "SET_COUNT", payload: count });
-      loginStore({ id: data.userId, email: data.email ?? "guest" });
+      loginStore({
+        id: data.userId,
+        email: data.email ?? "guest",
+        isAdmin: false,
+      });
       router.push("/");
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "訪客登入失敗");
@@ -72,7 +84,7 @@ export default function LoginPage() {
     <main className={styles.loginWrapper}>
       <div>
         <Image src="/title-login.png" alt="login" width={77} height={20} />
-        <p className="text-muted mb-4">會員登入</p>
+        <p className="text-muted mb-4">請先登入</p>
 
         <form className="w-100" onSubmit={handleSubmit}>
           <div className="mb-3">
@@ -83,7 +95,7 @@ export default function LoginPage() {
               <input
                 type="email"
                 className="form-control border-start-0"
-                placeholder="輸入 Email"
+                placeholder="請輸入 Email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -111,11 +123,8 @@ export default function LoginPage() {
           </div>
 
           <div className="mb-4 text-end">
-            {/* <a href="#" className={styles.link}>
-              忘記密碼
-            </a> */}
             <a href="/register" className={styles.link}>
-              註冊帳號
+              前往註冊
             </a>
           </div>
 
@@ -124,7 +133,7 @@ export default function LoginPage() {
             className={`${styles.submitBtn} mb-4`}
             onClick={startGoogleLogin}
           >
-            使用 Google 信箱登入
+            使用 Google 登入
           </button>
 
           <button
@@ -133,15 +142,15 @@ export default function LoginPage() {
             onClick={handleGuestLogin}
             disabled={loading}
           >
-            以訪客身份瀏覽
+            直接以訪客身份進入
           </button>
 
           <button
             type="submit"
-            className={`${styles.submitBtn} `}
+            className={`${styles.submitBtn}`}
             disabled={loading}
           >
-            {loading ? "登入中..." : "登入"}
+            {loading ? "登入中…" : "登入"}
           </button>
 
           {message && (
