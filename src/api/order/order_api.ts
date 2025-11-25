@@ -12,6 +12,7 @@ export type OrderItem = {
 };
 
 export type OrderSummary = {
+  userId?: number | null;
   id: number;
   name: string;
   number: number;
@@ -23,6 +24,7 @@ export type OrderSummary = {
   subtotalPrice: string;
   lineItems: OrderItem[];
   shippingMethod?: "home" | "familymart" | "seveneleven" | string | null;
+  isAdmin?: boolean;
   merchantTradeNo?: string;
   tags?: string | null;
 };

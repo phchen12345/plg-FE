@@ -6,5 +6,5 @@ export async function fetchCurrentUser() {
   const { data } = await axios.get(`${API_BASE_URL}/api/auth/me`, {
     withCredentials: true,
   });
-  return data; // { userId, phoneCode, phone }
+  return data as { userId: number; email: string; isAdmin: boolean };
 }

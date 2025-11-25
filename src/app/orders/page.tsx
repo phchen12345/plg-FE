@@ -1,5 +1,6 @@
 ﻿"use client";
 
+import { useAuthStore } from "@/store/userAuthStore";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import styles from "./orders.module.scss";
@@ -56,21 +57,37 @@ export default function OrdersPage() {
   const [error, setError] = useState("");
   const [refreshing, setRefreshing] = useState(false);
   const [printingOrderId, setPrintingOrderId] = useState<number | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const { init, user } = useAuthStore();
 
-  const loadOrders = useCallback(async (isRefresh = false) => {
-    try {
-      if (isRefresh) setRefreshing(true);
-      else setLoading(true);
-      const data = await fetchOrders(20);
-      setOrders(data);
-      setError("");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "無法取得訂單資料");
-    } finally {
-      if (isRefresh) setRefreshing(false);
-      else setLoading(false);
-    }
-  }, []);
+  useEffect(() => {
+    init();
+  }, [init]);
+
+  const loadOrders = useCallback(
+    async (isRefresh = false) => {
+      try {
+        if (isRefresh) setRefreshing(true);
+        else setLoading(true);
+        const data = await fetchOrders(20);
+        // 如果後端回 { orders, isAdmin } 就在這裡取出
+        if (Array.isArray((data as any).orders)) {
+          setOrders((data as any).orders);
+          setIsAdmin(Boolean((data as any).isAdmin));
+        } else {
+          setOrders(data as OrderSummary[]);
+          setIsAdmin(Boolean(user?.isAdmin));
+        }
+        setError("");
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "無法取得訂單資料");
+      } finally {
+        if (isRefresh) setRefreshing(false);
+        else setLoading(false);
+      }
+    },
+    [user?.isAdmin]
+  );
 
   useEffect(() => {
     loadOrders(false);
@@ -80,6 +97,11 @@ export default function OrdersPage() {
 
   const handlePrintWaybill = useCallback(
     async (order: OrderSummary, carrier: CvsCarrier) => {
+      if (!isAdmin) {
+        window.alert("只有管理員可以列印託運單");
+        return;
+      }
+
       const merchantTradeNo = order.merchantTradeNo ?? order.name ?? "";
       if (!merchantTradeNo) {
         window.alert("找不到對應的綠界物流訂單編號");
@@ -118,7 +140,7 @@ export default function OrdersPage() {
         setPrintingOrderId(null);
       }
     },
-    []
+    [isAdmin]
   );
 
   if (loading) {
@@ -158,7 +180,7 @@ export default function OrdersPage() {
       <section className={styles.layout}>
         <div className={styles.shippingCard}>
           <div style={{ display: "flex", justifyContent: "space-between" }}>
-            <h1>我的訂單</h1>
+            <h1>{isAdmin ? "所有訂單" : "我的訂單"}</h1>
             <button
               type="button"
               onClick={() => loadOrders(true)}
@@ -179,6 +201,11 @@ export default function OrdersPage() {
                     <p className={styles.orderDate}>
                       {new Date(order.createdAt).toLocaleString("zh-TW")}
                     </p>
+                    {isAdmin && (
+                      <p className={styles.orderDate}>
+                        會員：{order.userId ?? "未知"}
+                      </p>
+                    )}
                   </div>
                   <div className={styles.orderStatus}>
                     <span>
@@ -210,38 +237,44 @@ export default function OrdersPage() {
                 </ul>
 
                 <footer className={styles.orderFooter}>
-                  <p className="text-[#fff] flex m-2">
+                  <p>
                     總計：
                     <strong>
                       {formatCurrency(order.totalPrice, order.currency)}
                     </strong>
                   </p>
-                  <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-                    {shippingMethod === "familymart" && (
-                      <button
-                        type="button"
-                        className={styles.linkButton}
-                        onClick={() => handlePrintWaybill(order, "familymart")}
-                        disabled={printingOrderId === order.id}
-                      >
-                        {printingOrderId === order.id
-                          ? "產生託運單..."
-                          : "列印全家託運單"}
-                      </button>
-                    )}
-                    {shippingMethod === "seveneleven" && (
-                      <button
-                        type="button"
-                        className={styles.linkButton}
-                        onClick={() => handlePrintWaybill(order, "seveneleven")}
-                        disabled={printingOrderId === order.id}
-                      >
-                        {printingOrderId === order.id
-                          ? "產生託運單..."
-                          : "列印 7-11 託運單"}
-                      </button>
-                    )}
-                  </div>
+                  {isAdmin && (
+                    <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+                      {shippingMethod === "familymart" && (
+                        <button
+                          type="button"
+                          className={styles.linkButton}
+                          onClick={() =>
+                            handlePrintWaybill(order, "familymart")
+                          }
+                          disabled={printingOrderId === order.id}
+                        >
+                          {printingOrderId === order.id
+                            ? "產生託運單..."
+                            : "列印全家託運單"}
+                        </button>
+                      )}
+                      {shippingMethod === "seveneleven" && (
+                        <button
+                          type="button"
+                          className={styles.linkButton}
+                          onClick={() =>
+                            handlePrintWaybill(order, "seveneleven")
+                          }
+                          disabled={printingOrderId === order.id}
+                        >
+                          {printingOrderId === order.id
+                            ? "產生託運單..."
+                            : "列印 7-11 託運單"}
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </footer>
               </article>
             );
