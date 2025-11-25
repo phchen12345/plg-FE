@@ -57,10 +57,7 @@ const SHIPPING_METHODS = [
   },
 ];
 
-const PAYMENT_OPTIONS = [
-  { value: "cod", label: "貨到付款" },
-  { value: "ecpay", label: "綠界支付" },
-];
+const PAYMENT_OPTIONS = [{ value: "ecpay", label: "綠界支付" }];
 
 const currency = (cents = 0) =>
   `NTD ${cents.toLocaleString("zh-TW", { minimumFractionDigits: 0 })}`;

@@ -222,9 +222,6 @@ export default function HeaderNav() {
 
           <div className="nav-icon-group">
             <div className="nav-icon">
-              <Image src="/search.png" width={28} height={28} alt="search" />
-            </div>
-            <div className="nav-icon">
               <a href="/cart" className="cart-link">
                 <Image src="/cart.png" width={24} height={24} alt="cart" />
                 {state.itemCount > 0 && (
@@ -251,11 +248,21 @@ export default function HeaderNav() {
                   aria-labelledby="dropdownMenuButton2"
                 >
                   {user ? (
-                    <li>
-                      <button className="dropdown-item" onClick={handleLogout}>
-                        登出
-                      </button>
-                    </li>
+                    <>
+                      <li>
+                        <a className="dropdown-item" href="/orders">
+                          我的訂單
+                        </a>
+                      </li>
+                      <li>
+                        <hr className="dropdown-divider" />
+                      </li>
+                      <li>
+                        <a className="dropdown-item" onClick={handleLogout}>
+                          登出
+                        </a>
+                      </li>
+                    </>
                   ) : (
                     <li>
                       <button className="dropdown-item" onClick={handleLogout}>
