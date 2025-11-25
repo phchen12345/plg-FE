@@ -10,6 +10,9 @@ import { useAuthStore } from "@/store/userAuthStore";
 import { loginAsGuest, startGoogleLogin } from "@/api/login/login_api";
 import { fetchCurrentUser } from "@/api/auth/api_auth";
 
+const ADMIN_EMAIL = process.env.NEXT_PUBLIC_ADMIN_EMAIL ?? "";
+const ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD ?? "";
+
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -19,6 +22,29 @@ export default function LoginPage() {
   const router = useRouter();
   const loginStore = useAuthStore((state) => state.login);
   const { dispatch } = useCart();
+
+  const doLogin = async (payload: { email: string; password: string }) => {
+    const baseUrl =
+      process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:3001";
+    const response = await fetch(`${baseUrl}/api/auth/login-email`, {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (!response.ok) {
+      const errBody = await response.json().catch(() => null);
+      throw new Error(errBody?.message ?? "登入失敗");
+    }
+    const me = await fetchCurrentUser(); // 拿 isAdmin
+    const count = await fetchCartItemCount();
+    dispatch({ type: "SET_COUNT", payload: count });
+    loginStore({
+      id: me.userId,
+      email: me.email,
+      isAdmin: Boolean(me.isAdmin),
+    });
+  };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -55,6 +81,19 @@ export default function LoginPage() {
       router.push("/");
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "登入失敗，請稍後再試");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAdminLogin = async () => {
+    setMessage("");
+    setLoading(true);
+    try {
+      await doLogin({ email: ADMIN_EMAIL, password: ADMIN_PASSWORD });
+      router.push("/");
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : "管理員登入失敗");
     } finally {
       setLoading(false);
     }
@@ -143,6 +182,15 @@ export default function LoginPage() {
             disabled={loading}
           >
             直接以訪客身份進入
+          </button>
+
+          <button
+            type="button"
+            className={`${styles.submitBtn} mb-4`}
+            onClick={handleAdminLogin}
+            disabled={loading}
+          >
+            管理員快速登入
           </button>
 
           <button
