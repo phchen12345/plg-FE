@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import styles from "../payment/payment.module.scss";
+import styles from "./orders.module.scss";
 import {
   fetchOrders,
   OrderSummary,
@@ -210,7 +210,7 @@ export default function OrdersPage() {
                 </ul>
 
                 <footer className={styles.orderFooter}>
-                  <p>
+                  <p className="text-[#fff] flex m-2">
                     總計：
                     <strong>
                       {formatCurrency(order.totalPrice, order.currency)}

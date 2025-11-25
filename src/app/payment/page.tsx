@@ -77,7 +77,6 @@ export default function PaymentPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [pickerLoading, setPickerLoading] = useState(false);
-  const [v2SelectionLoading, setV2SelectionLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const router = useRouter();
   const storePopupRef = useRef<Window | null>(null);
