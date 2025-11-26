@@ -180,7 +180,7 @@ export default function OrdersPage() {
       <section className={styles.layout}>
         <div className={styles.shippingCard}>
           <div style={{ display: "flex", justifyContent: "space-between" }}>
-            <h1>{isAdmin ? "所有訂單" : "我的訂單"}</h1>
+            <h1>{isAdmin ? "管理員模式，顯示所有訂單" : "我的訂單"}</h1>
             <button
               type="button"
               onClick={() => loadOrders(true)}
@@ -229,9 +229,7 @@ export default function OrdersPage() {
                       <span>
                         {item.title} × {item.quantity}
                       </span>
-                      <strong>
-                        {formatCurrency(item.price, order.currency)}
-                      </strong>
+                      <strong>{formatCurrency(order.subtotalPrice)}</strong>
                     </li>
                   ))}
                 </ul>
