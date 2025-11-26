@@ -213,6 +213,7 @@ export default function OrdersPage() {
                       {STATUS_LABEL[order.financialStatus] ??
                         order.financialStatus}
                     </span>
+                    <span>物流廠商: {order.shippingMethod}</span>
                     <span>
                       出貨狀態：
                       {order.fulfillmentStatus
