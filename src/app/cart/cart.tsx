@@ -130,7 +130,7 @@ export default function CartPage() {
                 <span className={styles.badge}>已選</span>
                 <h3>{item.name ?? "PLG 精品"}</h3>
                 <p className={styles.meta}>{item.tag ?? "#球迷必備"}</p>
-                <p className={styles.price}>{currency(price)}</p>
+                <p className={styles.price}>單價: {currency(price)}</p>
               </div>
               <div className={styles.quantityControl}>
                 <button

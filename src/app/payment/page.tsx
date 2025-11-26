@@ -2,17 +2,17 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useAuthStore } from "@/store/userAuthStore";
 import { useRouter } from "next/navigation";
 import styles from "./payment.module.scss";
 import { CartItem, fetchCart } from "@/api/cart/cart_api";
 import {
   requestStoreMapToken,
-  createOrder,
   createEcpayCheckout,
 } from "@/api/payment/payment_api";
 
-type ShippingMethod = "home" | "familymart" | "seveneleven";
-type PaymentMethod = "cod" | "ecpay";
+type ShippingMethod = "familymart" | "seveneleven";
+type PaymentMethod = "ecpay";
 
 type SelectedStore = {
   id: string;
@@ -25,24 +25,12 @@ type SelectedStore = {
 const STORAGE_KEY = "plg-selected-store";
 const PICKER_WINDOW_FEATURES = "width=980,height=700,scrollbars=yes";
 const PICKER_WINDOW_NAME = "plgStorePicker";
-const THIRD_PARTY_PICKER_HOSTS = [
-  "emap.pcsc.com.tw",
-  "emap.famiport.com.tw",
-  "famiport.com.tw",
-];
-const METHOD_TO_SUBTYPE: Record<ShippingMethod, string | null> = {
-  home: null,
+const METHOD_TO_SUBTYPE: Record<ShippingMethod, string> = {
   familymart: "FAMIC2C",
   seveneleven: "UNIMARTC2C",
 };
 
 const SHIPPING_METHODS = [
-  {
-    value: "home",
-    label: "宅配到府",
-    fee: 120,
-    description: "填寫地址，約 1-2 天送達",
-  },
   {
     value: "familymart",
     label: "全家店到店",
@@ -63,14 +51,11 @@ const currency = (cents = 0) =>
   `NTD ${cents.toLocaleString("zh-TW", { minimumFractionDigits: 0 })}`;
 
 export default function PaymentPage() {
+  const { user, init } = useAuthStore();
+  const [authChecked, setAuthChecked] = useState(false);
   const [items, setItems] = useState<CartItem[]>([]);
-  const [method, setMethod] = useState<ShippingMethod>("home");
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cod");
-  const [address, setAddress] = useState({
-    city: "",
-    district: "",
-    detail: "",
-  });
+  const [method, setMethod] = useState<ShippingMethod>("familymart");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("ecpay");
   const [selectedStore, setSelectedStore] = useState<SelectedStore | null>(
     null
   );
@@ -80,6 +65,72 @@ export default function PaymentPage() {
   const [submitting, setSubmitting] = useState(false);
   const router = useRouter();
   const storePopupRef = useRef<Window | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      await init();
+      setAuthChecked(true);
+    })();
+  }, [init]);
+
+  useEffect(() => {
+    if (!authChecked) return;
+    if (!user) {
+      router.replace("/login");
+    }
+  }, [authChecked, user, router]);
+
+  const normalizeStore = (raw: any): SelectedStore | null => {
+    if (!raw || typeof raw !== "object") return null;
+    if (!raw.storeid && !raw.id) return null;
+    const id = raw.id ?? raw.storeid;
+    return {
+      id,
+      name: raw.name ?? raw.storename ?? id,
+      address: raw.address ?? raw.storeaddress ?? "",
+      phone: raw.phone ?? "",
+      logisticsSubType: raw.logisticsSubType ?? raw.LogisticsSubType ?? "",
+    };
+  };
+
+  useEffect(() => {
+    const syncFromStorage = () => {
+      const saved = window.localStorage.getItem(STORAGE_KEY);
+      if (!saved) return;
+      try {
+        const parsed = normalizeStore(JSON.parse(saved));
+        if (parsed) {
+          setSelectedStore(parsed);
+        }
+      } catch {
+        window.localStorage.removeItem(STORAGE_KEY);
+      }
+    };
+
+    const handleMessage = (event: MessageEvent) => {
+      const parsed = normalizeStore(event.data);
+      if (!parsed) return;
+      setSelectedStore(parsed);
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
+    };
+
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === STORAGE_KEY) {
+        syncFromStorage();
+      }
+    };
+
+    syncFromStorage();
+    window.addEventListener("message", handleMessage);
+    window.addEventListener("storage", handleStorage);
+    window.addEventListener("focus", syncFromStorage);
+
+    return () => {
+      window.removeEventListener("message", handleMessage);
+      window.removeEventListener("storage", handleStorage);
+      window.removeEventListener("focus", syncFromStorage);
+    };
+  }, []);
 
   useEffect(() => {
     const load = async () => {
@@ -107,88 +158,28 @@ export default function PaymentPage() {
     SHIPPING_METHODS.find((opt) => opt.value === method)?.fee ?? 0;
   const total = subtotal + shippingFee;
 
-  const applyStoreSelection = useCallback(
-    (payload: {
-      storeid?: string | null;
-      storename?: string | null;
-      storeaddress?: string | null;
-      phone?: string | null;
-      logisticsSubType?: string | null;
-    }) => {
-      if (!payload?.storeid) return;
-      const data: SelectedStore = {
-        id: payload.storeid,
-        name: payload.storename ?? payload.storeid,
-        address: payload.storeaddress ?? "",
-        phone: payload.phone ?? "",
-        logisticsSubType: payload.logisticsSubType ?? "",
-      };
-      setSelectedStore(data);
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-      setError("");
-      storePopupRef.current?.close();
-      storePopupRef.current = null;
-    },
-    []
-  );
-
   useEffect(() => {
-    const syncStore = () => {
-      const raw = window.localStorage.getItem(STORAGE_KEY);
-      if (!raw) return;
+    const saved = window.localStorage.getItem(STORAGE_KEY);
+    if (saved) {
       try {
-        const parsed = JSON.parse(raw) as SelectedStore;
-        if (parsed?.id) setSelectedStore(parsed);
+        const parsed = JSON.parse(saved) as SelectedStore;
+        setSelectedStore(parsed);
       } catch {
-      } finally {
+        setSelectedStore(null);
         window.localStorage.removeItem(STORAGE_KEY);
       }
-    };
-
-    const handleMessage = (event: MessageEvent) => {
-      let hostname = "";
-      try {
-        hostname = new URL(event.origin).hostname;
-      } catch {
-        hostname = "";
-      }
-      const allowedHosts = [
-        ...THIRD_PARTY_PICKER_HOSTS,
-        window.location.hostname,
-      ].filter(Boolean);
-      if (!allowedHosts.some((domain) => hostname.endsWith(domain))) return;
-      applyStoreSelection(event.data ?? {});
-    };
-
-    window.addEventListener("storage", syncStore);
-    window.addEventListener("focus", syncStore);
-    window.addEventListener("message", handleMessage);
-    syncStore();
-    return () => {
-      window.removeEventListener("storage", syncStore);
-      window.removeEventListener("focus", syncStore);
-      window.removeEventListener("message", handleMessage);
-    };
-  }, [applyStoreSelection]);
-
-  useEffect(() => {
-    if (method === "home") setSelectedStore(null);
-  }, [method]);
-
-  useEffect(() => {
+    }
     return () => {
       storePopupRef.current?.close();
     };
   }, []);
 
   const openStorePicker = async () => {
-    if (method === "home" || pickerLoading) return;
+    if (pickerLoading) return;
     const logisticsSubType = METHOD_TO_SUBTYPE[method];
-    if (!logisticsSubType) return;
-
-    setError("");
-    storePopupRef.current?.close();
-    const popup = window.open("", PICKER_WINDOW_NAME, PICKER_WINDOW_FEATURES);
+    const popup =
+      window.open("", PICKER_WINDOW_NAME, PICKER_WINDOW_FEATURES) ??
+      window.open("", "_blank");
     if (!popup) {
       setError("請允許瀏覽器跳出視窗以選擇門市");
       return;
@@ -198,7 +189,7 @@ export default function PaymentPage() {
     try {
       setPickerLoading(true);
       popup.document.write(
-        `<main style="font-family:sans-serif;padding:32px;text-align:center;">門市載入中...</main>`
+        '<main style="font-family:sans-serif;padding:32px;text-align:center;">門市載入中...</main>'
       );
       popup.document.close();
 
@@ -234,12 +225,7 @@ export default function PaymentPage() {
   };
 
   const handleSubmit = async () => {
-    if (method === "home") {
-      if (!address.city || !address.district || !address.detail) {
-        setError("請完整填寫配送地址");
-        return;
-      }
-    } else if (!selectedStore) {
+    if (selectedStore == null) {
       setError("請先選擇取貨門市");
       return;
     }
@@ -247,89 +233,55 @@ export default function PaymentPage() {
     try {
       setError("");
       setSubmitting(true);
-      if (paymentMethod === "ecpay") {
-        if (method !== "home" && !selectedStore) {
-          setError("請先選擇超商門市");
-          setSubmitting(false);
-          return;
-        }
+      const tradeNo = `EC${Date.now()}`;
+      const totalAmount = String(total);
 
-        const tradeNo = `EC${Date.now()}`;
-        const totalAmount = String(total);
+      const storePayload = {
+        id: selectedStore.id,
+        name: selectedStore.name,
+        address: selectedStore.address,
+        phone: selectedStore.phone ?? "",
+        logisticsSubType:
+          selectedStore.logisticsSubType ?? METHOD_TO_SUBTYPE[method],
+      };
 
-        const storePayload =
-          method === "home" || !selectedStore
-            ? null
-            : {
-                id: selectedStore.id,
-                name: selectedStore.name,
-                address: selectedStore.address,
-                phone: selectedStore.phone ?? "",
-                logisticsSubType:
-                  selectedStore.logisticsSubType ??
-                  METHOD_TO_SUBTYPE[method] ??
-                  "",
-              };
-
-        const orderPayload = {
-          items: items.map((item) => ({
-            productId: item.productId,
-            quantity: item.quantity,
-            name: item.name,
-            priceCents: item.priceCents,
-            shopifyVariantId: item.shopifyVariantId,
-          })),
-          shipping: {
-            method,
-            address:
-              method === "home"
-                ? {
-                    ...address,
-                    receiver:
-                      (address as any)?.receiver ??
-                      items[0]?.name ??
-                      "PLG Receiver",
-                  }
-                : undefined,
-            store: storePayload,
-          },
-          totals: { subtotal, shippingFee, total },
-        };
-
-        const { action, fields } = await createEcpayCheckout({
-          tradeNo,
-          totalAmount,
-          description: "PLG order",
-          order: orderPayload,
-        });
-
-        const form = document.createElement("form");
-        form.method = "POST";
-        form.action = action;
-        Object.entries(fields).forEach(([key, value]) => {
-          const input = document.createElement("input");
-          input.type = "hidden";
-          input.name = key;
-          input.value = value;
-          form.appendChild(input);
-        });
-        document.body.appendChild(form);
-        form.submit();
-        document.body.removeChild(form);
-        return;
-      }
-
-      await createOrder({
-        items,
+      const orderPayload = {
+        items: items.map((item) => ({
+          productId: item.productId,
+          quantity: item.quantity,
+          name: item.name,
+          priceCents: item.priceCents,
+          shopifyVariantId: item.shopifyVariantId,
+        })),
         shipping: {
           method,
-          address: method === "home" ? address : undefined,
-          store: method === "home" ? null : selectedStore,
+          store: storePayload,
         },
+        totals: { subtotal, shippingFee, total },
+      };
+
+      const { action, fields } = await createEcpayCheckout({
+        tradeNo,
+        totalAmount,
+        description: "PLG order",
+        order: orderPayload,
       });
-      router.push("/orders");
+
+      const form = document.createElement("form");
+      form.method = "POST";
+      form.action = action;
+      Object.entries(fields).forEach(([key, value]) => {
+        const input = document.createElement("input");
+        input.type = "hidden";
+        input.name = key;
+        input.value = value;
+        form.appendChild(input);
+      });
+      document.body.appendChild(form);
+      form.submit();
+      document.body.removeChild(form);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "無法建立訂單");
+      setError(err instanceof Error ? err.message : "建立訂單失敗");
     } finally {
       setSubmitting(false);
     }
@@ -418,69 +370,30 @@ export default function PaymentPage() {
             </div>
           </div>
 
-          {method === "home" && (
-            <div className={styles.formGrid}>
-              <label>
-                城市
-                <input
-                  type="text"
-                  value={address.city}
-                  onChange={(e) =>
-                    setAddress({ ...address, city: e.target.value })
-                  }
-                  placeholder="例如：台北市"
-                />
-              </label>
-              <label>
-                行政區
-                <input
-                  type="text"
-                  value={address.district}
-                  onChange={(e) =>
-                    setAddress({ ...address, district: e.target.value })
-                  }
-                  placeholder="例如：大安區"
-                />
-              </label>
-              <label className={styles.fullWidth}>
-                詳細地址
-                <input
-                  type="text"
-                  value={address.detail}
-                  onChange={(e) =>
-                    setAddress({ ...address, detail: e.target.value })
-                  }
-                  placeholder="道路、巷弄與門牌號"
-                />
-              </label>
-            </div>
-          )}
+          <div className={styles.storeSelector}>
+            <label>取貨門市</label>
+            {selectedStore ? (
+              <div className={styles.storeInfo}>
+                <p>{selectedStore.name}</p>
+                <p className={styles.storeAddress}>{selectedStore.address}</p>
+                <p>門市編號：{selectedStore.id}</p>
+                {selectedStore.phone && <p>電話：{selectedStore.phone}</p>}
+                {selectedStore.logisticsSubType && (
+                  <p>物流類型：{selectedStore.logisticsSubType}</p>
+                )}
+              </div>
+            ) : (
+              <p className={styles.placeholder}>尚未選擇門市</p>
+            )}
+            <button
+              type="button"
+              onClick={openStorePicker}
+              disabled={pickerLoading}
+            >
+              {pickerLoading ? "門市載入中..." : "選擇取貨門市"}
+            </button>
+          </div>
 
-          {method !== "home" && (
-            <div className={styles.storeSelector}>
-              <label>取貨門市</label>
-              {selectedStore ? (
-                <div className={styles.storeInfo}>
-                  <p>{selectedStore.name}</p>
-                  <p className={styles.storeAddress}>{selectedStore.address}</p>
-                  <p>門市編號：{selectedStore.id}</p>
-                  {selectedStore.phone && <p>電話：{selectedStore.phone}</p>}
-                  {selectedStore.logisticsSubType && (
-                    <p>物流類型：{selectedStore.logisticsSubType}</p>
-                  )}
-                </div>
-              ) : (
-                <p className={styles.placeholder}>尚未選擇門市</p>
-              )}
-              <button
-                type="button"
-                onClick={openStorePicker}
-                disabled={pickerLoading}
-              >
-                {pickerLoading ? "門市載入中..." : "選擇取貨門市"}
-              </button>
-            </div>
-          )}
           {error && <p className={styles.errorText}>{error}</p>}
 
           <div className={styles.actions}>
@@ -493,11 +406,7 @@ export default function PaymentPage() {
               onClick={handleSubmit}
               disabled={!items.length || submitting}
             >
-              {submitting
-                ? "建立訂單中…"
-                : paymentMethod === "cod"
-                ? "建立訂單"
-                : "前往付款"}
+              {submitting ? "建立訂單中…" : "前往付款"}
             </button>
           </div>
         </div>
@@ -510,13 +419,10 @@ export default function PaymentPage() {
                 <span>
                   {item.name ?? "PLG 商品"} × {item.quantity}
                 </span>
-                <strong>
-                  {currency((item.priceCents ?? 0) * item.quantity)}
-                </strong>
               </li>
             ))}
           </ul>
-          {selectedStore && method !== "home" && (
+          {selectedStore && (
             <p className={styles.summaryNote}>取貨門市：{selectedStore.name}</p>
           )}
           <div className={styles.summaryRow}>

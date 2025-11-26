@@ -1,5 +1,5 @@
 "use client";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import styles from "./login.module.scss";
 import Image from "next/image";
@@ -14,6 +14,7 @@ const ADMIN_EMAIL = process.env.NEXT_PUBLIC_ADMIN_EMAIL ?? "admin@example.com";
 const ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD ?? "123456";
 
 export default function LoginPage() {
+  const { user, init } = useAuthStore();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -22,6 +23,18 @@ export default function LoginPage() {
   const router = useRouter();
   const loginStore = useAuthStore((state) => state.login);
   const { dispatch } = useCart();
+
+  useEffect(() => {
+    (async () => {
+      await init();
+    })();
+  }, [init]);
+
+  useEffect(() => {
+    if (user) {
+      router.replace("/");
+    }
+  }, [user, router]);
 
   const doLogin = async (payload: { email: string; password: string }) => {
     const baseUrl =
