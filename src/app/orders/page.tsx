@@ -51,6 +51,12 @@ const formatCurrency = (amount: string, currency = "TWD") => {
   }).format(value);
 };
 
+const LOGISTICS_LABEL: Record<string, string> = {
+  familymart: "全家",
+  seveneleven: "7-11",
+  home: "宅配",
+};
+
 export default function OrdersPage() {
   const [orders, setOrders] = useState<OrderSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -213,7 +219,12 @@ export default function OrdersPage() {
                       {STATUS_LABEL[order.financialStatus] ??
                         order.financialStatus}
                     </span>
-                    <span>物流廠商: {order.shippingMethod}</span>
+                    <span>
+                      物流廠商：
+                      {LOGISTICS_LABEL[order.shippingMethod ?? ""] ??
+                        order.shippingMethod ??
+                        "未知"}
+                    </span>
                     <span>
                       出貨狀態：
                       {order.fulfillmentStatus
@@ -247,7 +258,7 @@ export default function OrdersPage() {
                       {shippingMethod === "familymart" && (
                         <button
                           type="button"
-                          className={styles.linkButton}
+                          className={`${styles.linkButton} `}
                           onClick={() =>
                             handlePrintWaybill(order, "familymart")
                           }
